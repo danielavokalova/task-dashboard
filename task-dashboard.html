@@ -68,6 +68,25 @@
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       margin-bottom: 16px;
     }
+    .breakdown-grid {
+      grid-template-columns: 1fr 1fr;
+      margin-bottom: 16px;
+    }
+    .breakdown-list {
+      display: grid;
+      gap: 8px;
+    }
+    .breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #f9fdfb;
+      font-weight: 600;
+    }
 
     .card {
       background: linear-gradient(180deg, #ffffff 0%, #f5fcf9 100%);
@@ -422,6 +441,7 @@
       .toolbar { grid-template-columns: 1fr 1fr; }
       .new-task-form { grid-template-columns: 1fr 1fr; }
       .edit-grid { grid-template-columns: 1fr 1fr; }
+      .breakdown-grid { grid-template-columns: 1fr; }
       .task-item { grid-template-columns: 1fr; }
       .task-actions { min-width: 0; }
       .kanban-board { grid-template-columns: 1fr; }
@@ -454,6 +474,16 @@
         <div class="stat-sub">Dokončené / všechny úkoly</div>
       </div>
     </div>
+    <div class="grid breakdown-grid">
+      <div class="card">
+        <div class="muted" style="margin-bottom:8px;">Počty podle produktu</div>
+        <div id="productBreakdown" class="breakdown-list"></div>
+      </div>
+      <div class="card">
+        <div class="muted" style="margin-bottom:8px;">Počty podle typu požadavku</div>
+        <div id="requestTypeBreakdown" class="breakdown-list"></div>
+      </div>
+    </div>
 
     <div class="card">
       <div class="toolbar">
@@ -477,6 +507,7 @@
           <option value="FWD">FWD</option>
           <option value="CM">CM</option>
           <option value="TM">TM</option>
+          <option value="mobile">mobile</option>
           <option value="jiné">jiné</option>
         </select>
         <select id="filterRequestType">
@@ -518,6 +549,7 @@
           <option value="FWD">FWD</option>
           <option value="CM">CM</option>
           <option value="TM">TM</option>
+          <option value="mobile">mobile</option>
           <option value="jiné">jiné</option>
         </select>
         <select id="newRequestType">
@@ -603,6 +635,8 @@
       statHighOpen: document.getElementById("statHighOpen"),
       statDueSoon: document.getElementById("statDueSoon"),
       statCompletion: document.getElementById("statCompletion"),
+      productBreakdown: document.getElementById("productBreakdown"),
+      requestTypeBreakdown: document.getElementById("requestTypeBreakdown"),
       taskList: document.getElementById("taskList"),
       colTodo: document.getElementById("colTodo"),
       colDoing: document.getElementById("colDoing"),
@@ -748,7 +782,7 @@
     }
 
     function normalizeProduct(value) {
-      const allowed = ["GOL IBE", "TG", "FWD", "CM", "TM", "jiné"];
+      const allowed = ["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "jiné"];
       return allowed.includes(value) ? value : "jiné";
     }
 
@@ -817,7 +851,7 @@
         current = task.priority;
       } else if (field === "product") {
         title = "Rychlá změna produktu";
-        options = ["GOL IBE", "TG", "FWD", "CM", "TM", "jiné"];
+        options = ["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "jiné"];
         current = task.product;
       } else if (field === "requestType") {
         title = "Rychlá změna typu požadavku";
@@ -935,6 +969,26 @@
       el.todoCount.textContent = todo;
       el.doingCount.textContent = doing;
       el.doneCount.textContent = done;
+
+      const productOrder = ["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "jiné"];
+      const requestTypeOrder = ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "jiné"];
+      const productCounts = productOrder.map((name) => ({
+        name,
+        count: tasks.filter((t) => normalizeProduct(t.product) === name).length
+      }));
+      const requestTypeCounts = requestTypeOrder.map((name) => ({
+        name,
+        count: tasks.filter((t) => normalizeRequestType(t.requestType) === name).length
+      }));
+
+      const breakdownItem = (label, count) => `
+        <div class="breakdown-item">
+          <span>${escapeHtml(label)}</span>
+          <span>${count}</span>
+        </div>
+      `;
+      el.productBreakdown.innerHTML = productCounts.map((x) => breakdownItem(x.name, x.count)).join("");
+      el.requestTypeBreakdown.innerHTML = requestTypeCounts.map((x) => breakdownItem(x.name, x.count)).join("");
     }
 
     function isDueSoon(task) {
@@ -997,7 +1051,7 @@
                 ${optionsHtml(["todo", "doing", "done"], task.status)}
               </select>
               <select data-edit-field="product" data-id="${task.id}">
-                ${optionsHtml(["GOL IBE", "TG", "FWD", "CM", "TM", "jiné"], task.product)}
+                ${optionsHtml(["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "jiné"], task.product)}
               </select>
               <select data-edit-field="requestType" data-id="${task.id}">
                 ${optionsHtml(["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "jiné"], task.requestType)}
