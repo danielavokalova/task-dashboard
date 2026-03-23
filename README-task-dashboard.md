@@ -49,3 +49,49 @@ git push -u origin main
 
 - Na GitHub Pages se ukoly porad ukladaji jen v prohlizeci daneho zarizeni.
 - Pro prenos mezi zarizenimi pouzij vzdy `Export CSV` a pak `Import CSV`.
+
+## Supabase cloud sync (vzdy aktualni data)
+
+Dashboard uz umi cloud synchronizaci. Staci jednorazove nastavit Supabase:
+
+1. V Supabase projektu otevri `SQL Editor` a spust:
+
+```sql
+create table if not exists public.task_dashboard_tasks (
+  id text primary key,
+  title text not null,
+  priority text not null check (priority in ('low','medium','high')),
+  status text not null check (status in ('todo','doing','done')),
+  due_date date null,
+  created_at_ms bigint not null,
+  completed_at_ms bigint null,
+  updated_at_ms bigint not null
+);
+
+alter table public.task_dashboard_tasks enable row level security;
+
+create policy "anon_read_tasks"
+on public.task_dashboard_tasks
+for select
+to anon
+using (true);
+
+create policy "anon_write_tasks"
+on public.task_dashboard_tasks
+for all
+to anon
+using (true)
+with check (true);
+```
+
+2. V Supabase otevri `Project Settings` -> `API`:
+   - zkopiruj `Project URL`
+   - zkopiruj `anon public` key
+
+3. V dashboardu klikni `Cloud pripojeni` a vloz URL + key.
+4. Stav uvidis vpravo (`Cloud: pripojeno` / `Cloud: aktualni`).
+
+Od te chvile:
+- kazda zmena ukolu se automaticky synchronizuje,
+- data zustanou zachovana i po obnoveni stranky,
+- na dalsim zarizeni po pripojeni ke stejnemu Supabase projektu uvidis stejne ukoly.

@@ -89,9 +89,16 @@
 
     .toolbar {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr auto auto auto auto auto;
+      grid-template-columns: 1fr 1fr 1fr auto auto auto auto auto auto auto;
       gap: 10px;
       margin-bottom: 12px;
+    }
+    .cloud-status {
+      font-size: 12px;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      padding: 0 4px;
     }
 
     .view-switch {
@@ -270,6 +277,9 @@
         <button id="importCsvBtn">Import CSV</button>
         <button id="copyReportBtn">Kopírovat report</button>
         <button id="emailReportBtn">Poslat e-mailem</button>
+        <button id="connectCloudBtn">Cloud připojení</button>
+        <button id="syncNowBtn">Sync teď</button>
+        <div id="cloudStatus" class="cloud-status">Cloud: lokální režim</div>
       </div>
       <input id="csvFileInput" type="file" accept=".csv,text/csv" class="hidden" />
 
@@ -317,13 +327,22 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const STORAGE_KEY = "taskDashboardDataV2";
     const LEGACY_STORAGE_KEY = "taskDashboardDataV1";
+    const CLOUD_CONFIG_KEY = "taskDashboardSupabaseConfigV1";
+    const CLOUD_TABLE = "task_dashboard_tasks";
 
     let tasks = loadTasks();
     let currentView = "list";
     let draggingTaskId = null;
+    let supabaseClient = null;
+    let cloudConnected = false;
+    let hasUnsyncedLocalChanges = false;
+    let syncInProgress = false;
+    let syncDebounceTimer = null;
+    let syncPollTimer = null;
 
     const el = {
       statTotal: document.getElementById("statTotal"),
@@ -360,6 +379,9 @@
       importCsvBtn: document.getElementById("importCsvBtn"),
       copyReportBtn: document.getElementById("copyReportBtn"),
       emailReportBtn: document.getElementById("emailReportBtn"),
+      connectCloudBtn: document.getElementById("connectCloudBtn"),
+      syncNowBtn: document.getElementById("syncNowBtn"),
+      cloudStatus: document.getElementById("cloudStatus"),
       csvFileInput: document.getElementById("csvFileInput")
     };
 
@@ -368,12 +390,12 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          return Array.isArray(parsed) ? parsed : sampleTasks();
+          return Array.isArray(parsed) ? parsed.map(normalizeTask) : sampleTasks();
         }
         const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
         if (legacyRaw) {
           const legacyParsed = JSON.parse(legacyRaw);
-          if (Array.isArray(legacyParsed)) return legacyParsed;
+          if (Array.isArray(legacyParsed)) return legacyParsed.map(normalizeTask);
         }
         return sampleTasks();
       } catch {
@@ -401,14 +423,36 @@
 
     function createTask(title, priority, status, dueDate) {
       const normalizedStatus = normalizeStatus(status);
+      const now = Date.now();
       return {
         id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
         title: title.trim(),
         priority: normalizePriority(priority),
         status: normalizedStatus,
         dueDate: normalizeDate(dueDate),
-        createdAt: Date.now(),
-        completedAt: normalizedStatus === "done" ? Date.now() : null
+        createdAt: now,
+        completedAt: normalizedStatus === "done" ? now : null,
+        updatedAt: now
+      };
+    }
+
+    function normalizeTask(task) {
+      const status = normalizeStatus(task.status);
+      const createdAt = Number.isFinite(Number(task.createdAt)) ? Number(task.createdAt) : Date.now();
+      const completedAtRaw = task.completedAt === null || task.completedAt === undefined ? null : Number(task.completedAt);
+      const completedAt = Number.isFinite(completedAtRaw) ? completedAtRaw : null;
+      const updatedAt = Number.isFinite(Number(task.updatedAt))
+        ? Number(task.updatedAt)
+        : (completedAt || createdAt || Date.now());
+      return {
+        id: String(task.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()))),
+        title: String(task.title || "").trim(),
+        priority: normalizePriority(task.priority),
+        status,
+        dueDate: normalizeDate(task.dueDate),
+        createdAt,
+        completedAt: status === "done" ? (completedAt || updatedAt) : null,
+        updatedAt
       };
     }
 
@@ -604,7 +648,7 @@
         el.newDueDate.value
       );
       tasks.unshift(task);
-      saveTasks();
+      markDirtyAndSave();
       el.newTitle.value = "";
       render();
     }
@@ -615,8 +659,15 @@
       const next = normalizeStatus(status);
       tasks[idx].status = next;
       tasks[idx].completedAt = next === "done" ? Date.now() : null;
-      saveTasks();
+      tasks[idx].updatedAt = Date.now();
+      markDirtyAndSave();
       render();
+    }
+
+    function markDirtyAndSave() {
+      hasUnsyncedLocalChanges = true;
+      saveTasks();
+      scheduleCloudSync();
     }
 
     function buildReportText() {
@@ -666,6 +717,159 @@
       const subject = encodeURIComponent("Report ukolu");
       const body = encodeURIComponent(buildReportText());
       window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    }
+
+    function updateCloudStatus(text) {
+      el.cloudStatus.textContent = text;
+    }
+
+    function getCloudConfig() {
+      try {
+        const raw = localStorage.getItem(CLOUD_CONFIG_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.url || !parsed.anonKey) return null;
+        return parsed;
+      } catch {
+        return null;
+      }
+    }
+
+    function setCloudConfig(url, anonKey) {
+      localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify({ url, anonKey }));
+    }
+
+    function taskToCloudRow(task) {
+      return {
+        id: task.id,
+        title: task.title,
+        priority: task.priority,
+        status: task.status,
+        due_date: task.dueDate || null,
+        created_at_ms: task.createdAt,
+        completed_at_ms: task.completedAt,
+        updated_at_ms: task.updatedAt || task.createdAt
+      };
+    }
+
+    function cloudRowToTask(row) {
+      return normalizeTask({
+        id: row.id,
+        title: row.title,
+        priority: row.priority,
+        status: row.status,
+        dueDate: row.due_date || "",
+        createdAt: row.created_at_ms,
+        completedAt: row.completed_at_ms,
+        updatedAt: row.updated_at_ms
+      });
+    }
+
+    async function connectCloud(url, anonKey) {
+      if (!window.supabase || !window.supabase.createClient) {
+        alert("Nepodarilo se nacist Supabase knihovnu.");
+        return false;
+      }
+      try {
+        supabaseClient = window.supabase.createClient(url, anonKey);
+        const { error } = await supabaseClient.from(CLOUD_TABLE).select("id").limit(1);
+        if (error) throw error;
+        cloudConnected = true;
+        setCloudConfig(url, anonKey);
+        updateCloudStatus("Cloud: pripojeno");
+        startCloudPolling();
+        await initialCloudSync();
+        return true;
+      } catch {
+        cloudConnected = false;
+        updateCloudStatus("Cloud: chyba pripojeni");
+        alert("Cloud se nepodarilo pripojit. Zkontroluj URL/key a SQL tabulku v Supabase.");
+        return false;
+      }
+    }
+
+    async function initialCloudSync() {
+      if (!cloudConnected) return;
+      updateCloudStatus("Cloud: prvotni sync...");
+      const { data, error } = await supabaseClient.from(CLOUD_TABLE).select("*");
+      if (error) {
+        updateCloudStatus("Cloud: chyba syncu");
+        return;
+      }
+      if (data && data.length) {
+        tasks = data.map(cloudRowToTask);
+        hasUnsyncedLocalChanges = false;
+        saveTasks();
+        render();
+        updateCloudStatus("Cloud: aktualni");
+      } else if (tasks.length) {
+        await pushTasksToCloud();
+        updateCloudStatus("Cloud: aktualni");
+      } else {
+        updateCloudStatus("Cloud: prazdny projekt");
+      }
+    }
+
+    async function pushTasksToCloud() {
+      if (!cloudConnected || !supabaseClient) return;
+      const rows = tasks.map(taskToCloudRow);
+      const ids = rows.map((r) => r.id);
+      const { error: upsertError } = await supabaseClient.from(CLOUD_TABLE).upsert(rows, { onConflict: "id" });
+      if (upsertError) throw upsertError;
+
+      const { data: remoteIds, error: idsError } = await supabaseClient.from(CLOUD_TABLE).select("id");
+      if (idsError) throw idsError;
+      const toDelete = (remoteIds || []).map((r) => r.id).filter((id) => !ids.includes(id));
+      if (toDelete.length) {
+        const { error: deleteError } = await supabaseClient.from(CLOUD_TABLE).delete().in("id", toDelete);
+        if (deleteError) throw deleteError;
+      }
+      hasUnsyncedLocalChanges = false;
+    }
+
+    async function pullTasksFromCloud() {
+      if (!cloudConnected || !supabaseClient || hasUnsyncedLocalChanges) return;
+      const { data, error } = await supabaseClient.from(CLOUD_TABLE).select("*").order("updated_at_ms", { ascending: false });
+      if (error) throw error;
+      if (!data) return;
+      const remoteTasks = data.map(cloudRowToTask);
+      if (JSON.stringify(remoteTasks) !== JSON.stringify(tasks)) {
+        tasks = remoteTasks;
+        saveTasks();
+        render();
+      }
+    }
+
+    async function runCloudSync() {
+      if (!cloudConnected || syncInProgress) return;
+      syncInProgress = true;
+      updateCloudStatus("Cloud: synchronizace...");
+      try {
+        if (hasUnsyncedLocalChanges) {
+          await pushTasksToCloud();
+        }
+        await pullTasksFromCloud();
+        updateCloudStatus("Cloud: aktualni");
+      } catch {
+        updateCloudStatus("Cloud: chyba synchronizace");
+      } finally {
+        syncInProgress = false;
+      }
+    }
+
+    function scheduleCloudSync() {
+      if (!cloudConnected) return;
+      clearTimeout(syncDebounceTimer);
+      syncDebounceTimer = setTimeout(() => {
+        runCloudSync();
+      }, 1200);
+    }
+
+    function startCloudPolling() {
+      clearInterval(syncPollTimer);
+      syncPollTimer = setInterval(() => {
+        runCloudSync();
+      }, 30000);
     }
 
     function toCsvValue(value) {
@@ -741,7 +945,7 @@
         const createdAtRaw = Number(cols[5]);
         const createdAt = Number.isFinite(createdAtRaw) ? createdAtRaw : Date.now();
 
-        imported.push({ id, title, priority, status, dueDate, createdAt });
+        imported.push(normalizeTask({ id, title, priority, status, dueDate, createdAt }));
       }
 
       if (!imported.length) {
@@ -750,7 +954,7 @@
       }
 
       tasks = imported;
-      saveTasks();
+      markDirtyAndSave();
       render();
       alert(`Import hotový: ${imported.length} úkolů.`);
     }
@@ -770,8 +974,9 @@
           const next = nextStatus(tasks[idx].status);
           tasks[idx].status = next;
           tasks[idx].completedAt = next === "done" ? Date.now() : null;
+          tasks[idx].updatedAt = Date.now();
         }
-        saveTasks();
+        markDirtyAndSave();
         render();
       });
     }
@@ -830,6 +1035,17 @@
     el.importCsvBtn.addEventListener("click", () => el.csvFileInput.click());
     el.copyReportBtn.addEventListener("click", copyReport);
     el.emailReportBtn.addEventListener("click", emailReport);
+    el.connectCloudBtn.addEventListener("click", async () => {
+      const current = getCloudConfig();
+      const url = prompt("Supabase URL", current ? current.url : "");
+      if (!url) return;
+      const key = prompt("Supabase anon key", current ? current.anonKey : "");
+      if (!key) return;
+      await connectCloud(url.trim(), key.trim());
+    });
+    el.syncNowBtn.addEventListener("click", () => {
+      runCloudSync();
+    });
     el.csvFileInput.addEventListener("change", () => {
       const file = el.csvFileInput.files && el.csvFileInput.files[0];
       if (!file) return;
@@ -844,17 +1060,28 @@
     wireTaskActions(el.taskList);
     wireTaskActions(el.kanbanContainer);
     wireKanbanDnD();
+    window.addEventListener("focus", () => {
+      runCloudSync();
+    });
 
     el.resetDemo.addEventListener("click", () => {
       const ok = confirm("Opravdu chceš smazat všechny úkoly?");
       if (!ok) return;
       tasks = [];
-      saveTasks();
+      markDirtyAndSave();
       render();
     });
 
     setView("list");
     render();
+    (async () => {
+      const config = getCloudConfig();
+      if (!config) {
+        updateCloudStatus("Cloud: lokální režim");
+        return;
+      }
+      await connectCloud(config.url, config.anonKey);
+    })();
   </script>
 </body>
 </html>
