@@ -68,9 +68,28 @@
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       margin-bottom: 16px;
     }
+    .stats-panel { margin-bottom: 16px; }
+    .stats-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .stats-panel-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
     .breakdown-grid {
-      grid-template-columns: 1fr 1fr;
-      margin-bottom: 16px;
+      grid-template-columns: 1fr 1.2fr;
+      margin-top: 10px;
+    }
+    .breakdown-col {
+      display: grid;
+      gap: 10px;
     }
     .breakdown-list {
       display: grid;
@@ -86,6 +105,17 @@
       padding: 8px 10px;
       background: #f9fdfb;
       font-weight: 600;
+    }
+    .chart-wrap {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 290px;
+    }
+    #statsChart {
+      width: 100%;
+      max-height: 320px;
     }
 
     .card {
@@ -474,14 +504,28 @@
         <div class="stat-sub">Dokončené / všechny úkoly</div>
       </div>
     </div>
-    <div class="grid breakdown-grid">
-      <div class="card">
-        <div class="muted" style="margin-bottom:8px;">Počty podle produktu</div>
-        <div id="productBreakdown" class="breakdown-list"></div>
+    <div class="card stats-panel">
+      <div class="stats-panel-header">
+        <div class="muted">Přehled podle produktu a typu požadavku</div>
+        <div class="stats-panel-actions">
+          <button id="toggleBreakdownBtn">Vybalit statistiky</button>
+          <button id="chartTypeBtn">Graf: sloupcový</button>
+        </div>
       </div>
-      <div class="card">
-        <div class="muted" style="margin-bottom:8px;">Počty podle typu požadavku</div>
-        <div id="requestTypeBreakdown" class="breakdown-list"></div>
+      <div id="breakdownSection" class="grid breakdown-grid hidden">
+        <div class="breakdown-col">
+          <div>
+            <div class="muted" style="margin-bottom:8px;">Počty podle produktu</div>
+            <div id="productBreakdown" class="breakdown-list"></div>
+          </div>
+          <div>
+            <div class="muted" style="margin-bottom:8px;">Počty podle typu požadavku</div>
+            <div id="requestTypeBreakdown" class="breakdown-list"></div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="statsChart"></canvas>
+        </div>
       </div>
     </div>
 
@@ -605,6 +649,7 @@
   </div>
   <div id="quickMenu" class="quick-menu hidden"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const STORAGE_KEY = "taskDashboardDataV2";
@@ -624,6 +669,9 @@
     let expandedTaskIds = new Set();
     let editingTaskIds = new Set();
     let taskExtras = loadTaskExtras();
+    let breakdownExpanded = false;
+    let chartType = "bar";
+    let statsChart = null;
 
     const el = {
       statTotal: document.getElementById("statTotal"),
@@ -637,6 +685,10 @@
       statCompletion: document.getElementById("statCompletion"),
       productBreakdown: document.getElementById("productBreakdown"),
       requestTypeBreakdown: document.getElementById("requestTypeBreakdown"),
+      breakdownSection: document.getElementById("breakdownSection"),
+      toggleBreakdownBtn: document.getElementById("toggleBreakdownBtn"),
+      chartTypeBtn: document.getElementById("chartTypeBtn"),
+      statsChartCanvas: document.getElementById("statsChart"),
       taskList: document.getElementById("taskList"),
       colTodo: document.getElementById("colTodo"),
       colDoing: document.getElementById("colDoing"),
@@ -980,7 +1032,10 @@
         name,
         count: tasks.filter((t) => normalizeRequestType(t.requestType) === name).length
       }));
+      renderBreakdown(productCounts, requestTypeCounts);
+    }
 
+    function renderBreakdown(productCounts, requestTypeCounts) {
       const breakdownItem = (label, count) => `
         <div class="breakdown-item">
           <span>${escapeHtml(label)}</span>
@@ -989,6 +1044,42 @@
       `;
       el.productBreakdown.innerHTML = productCounts.map((x) => breakdownItem(x.name, x.count)).join("");
       el.requestTypeBreakdown.innerHTML = requestTypeCounts.map((x) => breakdownItem(x.name, x.count)).join("");
+
+      if (!window.Chart || !el.statsChartCanvas || !breakdownExpanded) {
+        if (statsChart) {
+          statsChart.destroy();
+          statsChart = null;
+        }
+        return;
+      }
+      const labels = productCounts.map((x) => x.name);
+      const data = productCounts.map((x) => x.count);
+      const colors = ["#0ea5e9", "#6366f1", "#14b8a6", "#f59e0b", "#10b981", "#ef4444", "#64748b"];
+
+      if (statsChart) statsChart.destroy();
+      statsChart = new window.Chart(el.statsChartCanvas, {
+        type: chartType,
+        data: {
+          labels,
+          datasets: [{
+            label: "Počet úkolů",
+            data,
+            backgroundColor: chartType === "pie" ? colors : "rgba(17, 168, 104, 0.7)",
+            borderColor: chartType === "pie" ? "#ffffff" : "rgba(17, 168, 104, 1)",
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: chartType === "pie" }
+          },
+          scales: chartType === "pie" ? {} : {
+            y: { beginAtZero: true, ticks: { precision: 0 } }
+          }
+        }
+      });
     }
 
     function isDueSoon(task) {
@@ -1680,6 +1771,17 @@
     el.kanbanViewBtn.addEventListener("click", () => setView("kanban"));
     el.exportCsvBtn.addEventListener("click", exportCsv);
     el.importCsvBtn.addEventListener("click", () => el.csvFileInput.click());
+    el.toggleBreakdownBtn.addEventListener("click", () => {
+      breakdownExpanded = !breakdownExpanded;
+      el.breakdownSection.classList.toggle("hidden", !breakdownExpanded);
+      el.toggleBreakdownBtn.textContent = breakdownExpanded ? "Skrýt statistiky" : "Vybalit statistiky";
+      if (breakdownExpanded) render();
+    });
+    el.chartTypeBtn.addEventListener("click", () => {
+      chartType = chartType === "bar" ? "pie" : "bar";
+      el.chartTypeBtn.textContent = chartType === "bar" ? "Graf: sloupcový" : "Graf: kruhový";
+      if (breakdownExpanded) render();
+    });
     el.copyReportBtn.addEventListener("click", copyReport);
     el.emailReportBtn.addEventListener("click", emailReport);
     el.connectCloudBtn.addEventListener("click", async () => {
