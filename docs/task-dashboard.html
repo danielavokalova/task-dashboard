@@ -197,6 +197,50 @@
       transform: translateY(-1px);
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
     }
+    .quick-menu {
+      position: absolute;
+      z-index: 30;
+      min-width: 240px;
+      max-width: 320px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 20px 38px rgba(10, 49, 34, 0.22);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+    .quick-menu-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .quick-menu-options {
+      display: grid;
+      gap: 6px;
+    }
+    .quick-option {
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fcfa;
+      color: var(--text);
+      font-weight: 700;
+    }
+    .quick-option.active {
+      border-color: #7ed4af;
+      background: #dcf6e9;
+      color: #0b7d4d;
+    }
+    .quick-date-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
 
     .status-todo {
       background: #d8e9ff;
@@ -513,6 +557,7 @@
       </div>
     </div>
   </div>
+  <div id="quickMenu" class="quick-menu hidden"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -576,7 +621,8 @@
       connectCloudBtn: document.getElementById("connectCloudBtn"),
       syncNowBtn: document.getElementById("syncNowBtn"),
       cloudStatus: document.getElementById("cloudStatus"),
-      csvFileInput: document.getElementById("csvFileInput")
+      csvFileInput: document.getElementById("csvFileInput"),
+      quickMenu: document.getElementById("quickMenu")
     };
 
     function loadTaskExtras() {
@@ -733,16 +779,95 @@
       return values.map((value) => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(value)}</option>`).join("");
     }
 
-    function quickPickLabel(promptLabel, values, current) {
-      const lines = values.map((v, i) => `${i + 1}) ${v}`).join("\n");
-      const raw = prompt(`${promptLabel}\n\n${lines}\n\nZadej cislo nebo hodnotu:`, current || "");
-      if (raw === null) return null;
-      const val = String(raw).trim();
-      if (!val) return current;
-      const idx = Number(val);
-      if (Number.isFinite(idx) && idx >= 1 && idx <= values.length) return values[idx - 1];
-      const byValue = values.find((v) => v.toLowerCase() === val.toLowerCase());
-      return byValue || current;
+    function closeQuickMenu() {
+      el.quickMenu.classList.add("hidden");
+      el.quickMenu.innerHTML = "";
+    }
+
+    function openQuickMenu(taskId, field, triggerEl) {
+      const idx = tasks.findIndex((t) => t.id === taskId);
+      if (idx < 0) return;
+      const task = tasks[idx];
+      let title = "";
+      let options = [];
+      let current = "";
+      let includeDateInput = false;
+
+      if (field === "status") {
+        title = "Rychlá změna stavu";
+        options = ["todo", "doing", "done"];
+        current = task.status;
+      } else if (field === "priority") {
+        title = "Rychlá změna priority";
+        options = ["low", "medium", "high"];
+        current = task.priority;
+      } else if (field === "product") {
+        title = "Rychlá změna produktu";
+        options = ["GOL IBE", "TG", "FWD", "CM", "TM", "jiné"];
+        current = task.product;
+      } else if (field === "requestType") {
+        title = "Rychlá změna typu požadavku";
+        options = ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "jiné"];
+        current = task.requestType;
+      } else if (field === "dueDate") {
+        title = "Rychlá změna termínu";
+        options = ["dnes", "zítra", "za 3 dny", "za 7 dní", "bez termínu"];
+        current = "";
+        includeDateInput = true;
+      }
+
+      const optionsHtmlList = options.map((value) => `
+        <button class="quick-option ${value === current ? "active" : ""}" data-action="quick-select" data-id="${taskId}" data-field="${field}" data-value="${escapeHtml(value)}">
+          ${escapeHtml(value)}
+        </button>
+      `).join("");
+
+      el.quickMenu.innerHTML = `
+        <div class="quick-menu-title">${escapeHtml(title)}</div>
+        <div class="quick-menu-options">${optionsHtmlList}</div>
+        ${includeDateInput ? `
+          <div class="quick-date-row">
+            <input type="date" data-quick-date-input="${taskId}" value="${escapeHtml(task.dueDate || "")}" />
+            <button class="small-btn" data-action="quick-save-date" data-id="${taskId}">Uložit</button>
+          </div>
+        ` : ""}
+      `;
+
+      const rect = triggerEl.getBoundingClientRect();
+      const left = Math.min(window.scrollX + rect.left, window.scrollX + window.innerWidth - 340);
+      const top = window.scrollY + rect.bottom + 8;
+      el.quickMenu.style.left = `${Math.max(8, left)}px`;
+      el.quickMenu.style.top = `${top}px`;
+      el.quickMenu.classList.remove("hidden");
+    }
+
+    function applyQuickSelection(taskId, field, value) {
+      const idx = tasks.findIndex((t) => t.id === taskId);
+      if (idx < 0) return;
+      const task = tasks[idx];
+      if (field === "status") {
+        task.status = normalizeStatus(value);
+        task.completedAt = task.status === "done" ? (task.completedAt || Date.now()) : null;
+      } else if (field === "priority") {
+        task.priority = normalizePriority(value);
+      } else if (field === "product") {
+        task.product = normalizeProduct(value);
+      } else if (field === "requestType") {
+        task.requestType = normalizeRequestType(value);
+      } else if (field === "dueDate") {
+        if (value === "bez termínu") {
+          task.dueDate = "";
+        } else {
+          const now = new Date();
+          const addDays = value === "dnes" ? 0 : value === "zítra" ? 1 : value === "za 3 dny" ? 3 : 7;
+          now.setDate(now.getDate() + addDays);
+          task.dueDate = now.toISOString().slice(0, 10);
+        }
+      }
+      task.updatedAt = Date.now();
+      markDirtyAndSave();
+      render();
+      closeQuickMenu();
     }
 
     function filteredTasks() {
@@ -1369,44 +1494,33 @@
           }
           return;
         } else if (action === "quick-status") {
-          const next = nextStatus(tasks[idx].status);
-          tasks[idx].status = next;
-          tasks[idx].completedAt = next === "done" ? (tasks[idx].completedAt || Date.now()) : null;
-          tasks[idx].updatedAt = Date.now();
+          openQuickMenu(id, "status", trigger);
+          return;
         } else if (action === "quick-priority") {
-          const order = ["low", "medium", "high"];
-          const i = order.indexOf(tasks[idx].priority);
-          tasks[idx].priority = order[(i + 1) % order.length];
-          tasks[idx].updatedAt = Date.now();
+          openQuickMenu(id, "priority", trigger);
+          return;
         } else if (action === "quick-product") {
-          const picked = quickPickLabel(
-            "Vyber produkt",
-            ["GOL IBE", "TG", "FWD", "CM", "TM", "jiné"],
-            tasks[idx].product
-          );
-          if (!picked) return;
-          tasks[idx].product = normalizeProduct(picked);
-          tasks[idx].updatedAt = Date.now();
+          openQuickMenu(id, "product", trigger);
+          return;
         } else if (action === "quick-request-type") {
-          const picked = quickPickLabel(
-            "Vyber typ požadavku",
-            ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "jiné"],
-            tasks[idx].requestType
-          );
-          if (!picked) return;
-          tasks[idx].requestType = normalizeRequestType(picked);
-          tasks[idx].updatedAt = Date.now();
+          openQuickMenu(id, "requestType", trigger);
+          return;
         } else if (action === "quick-due-date") {
-          const input = prompt("Zadej termín (YYYY-MM-DD). Nech prázdné pro smazání termínu.", tasks[idx].dueDate || "");
-          if (input === null) return;
-          const trimmed = input.trim();
-          const normalized = normalizeDate(trimmed);
-          if (trimmed && !normalized) {
+          openQuickMenu(id, "dueDate", trigger);
+          return;
+        } else if (action === "quick-select") {
+          applyQuickSelection(id, trigger.dataset.field, trigger.dataset.value);
+          return;
+        } else if (action === "quick-save-date") {
+          const input = el.quickMenu.querySelector(`[data-quick-date-input="${id}"]`);
+          const raw = input ? input.value.trim() : "";
+          const normalized = normalizeDate(raw);
+          if (raw && !normalized) {
             alert("Neplatný formát data. Použij YYYY-MM-DD.");
             return;
           }
-          tasks[idx].dueDate = normalized;
-          tasks[idx].updatedAt = Date.now();
+          applyQuickSelection(id, "dueDate", raw ? raw : "bez termínu");
+          return;
         }
         markDirtyAndSave();
         render();
@@ -1529,6 +1643,14 @@
     wireTaskActions(el.taskList);
     wireTaskActions(el.kanbanContainer);
     wireKanbanDnD();
+    document.addEventListener("click", (e) => {
+      if (el.quickMenu.classList.contains("hidden")) return;
+      if (e.target.closest("#quickMenu")) return;
+      if (e.target.closest(".tag-clickable")) return;
+      closeQuickMenu();
+    });
+    window.addEventListener("scroll", closeQuickMenu, true);
+    window.addEventListener("resize", closeQuickMenu);
     window.addEventListener("focus", () => {
       runCloudSync();
     });
