@@ -284,6 +284,26 @@
       padding: 6px 8px;
       font-size: 12px;
     }
+    .edit-form {
+      grid-column: 1 / -1;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #ffffff;
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .edit-grid {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
+    }
+    .edit-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
     .empty {
       padding: 20px;
@@ -338,6 +358,7 @@
     @media (max-width: 980px) {
       .toolbar { grid-template-columns: 1fr 1fr; }
       .new-task-form { grid-template-columns: 1fr 1fr; }
+      .edit-grid { grid-template-columns: 1fr 1fr; }
       .task-item { grid-template-columns: 1fr; }
       .task-actions { min-width: 0; }
       .kanban-board { grid-template-columns: 1fr; }
@@ -502,6 +523,7 @@
     let syncDebounceTimer = null;
     let syncPollTimer = null;
     let expandedTaskIds = new Set();
+    let editingTaskIds = new Set();
     let taskExtras = loadTaskExtras();
 
     const el = {
@@ -699,6 +721,10 @@
       return priority === "low" ? "Nízká" : priority === "medium" ? "Střední" : "Vysoká";
     }
 
+    function optionsHtml(values, selected) {
+      return values.map((value) => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(value)}</option>`).join("");
+    }
+
     function filteredTasks() {
       const query = el.searchInput.value.trim().toLowerCase();
       const status = el.filterStatus.value;
@@ -772,6 +798,7 @@
     function taskCardHtml(task, draggable) {
       const overdue = isOverdue(task);
       const detailsOpen = expandedTaskIds.has(task.id);
+      const editOpen = editingTaskIds.has(task.id);
       const extra = getTaskExtra(task.id);
       const notes = escapeHtml(extra.notes || "");
       const attachments = (extra.attachments || []).map((item, index) => `
@@ -796,9 +823,33 @@
           </div>
           <div class="task-actions">
             <button data-action="advance" data-id="${task.id}">Posunout stav</button>
+            <button data-action="toggle-edit" data-id="${task.id}">${editOpen ? "Zavřít editaci" : "Upravit"}</button>
             <button data-action="toggle-details" data-id="${task.id}">${detailsOpen ? "Skrýt detail" : "Poznámky a přílohy"}</button>
             <button data-action="delete" data-id="${task.id}" style="color: #fecaca;">Smazat</button>
           </div>
+          ${editOpen ? `
+          <div class="edit-form">
+            <div class="edit-grid">
+              <input type="text" data-edit-field="title" data-id="${task.id}" value="${escapeHtml(task.title)}" />
+              <select data-edit-field="priority" data-id="${task.id}">
+                ${optionsHtml(["low", "medium", "high"], task.priority)}
+              </select>
+              <select data-edit-field="status" data-id="${task.id}">
+                ${optionsHtml(["todo", "doing", "done"], task.status)}
+              </select>
+              <select data-edit-field="product" data-id="${task.id}">
+                ${optionsHtml(["GOL IBE", "TG", "FWD", "CM", "TM", "jiné"], task.product)}
+              </select>
+              <select data-edit-field="requestType" data-id="${task.id}">
+                ${optionsHtml(["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "jiné"], task.requestType)}
+              </select>
+              <input type="date" data-edit-field="dueDate" data-id="${task.id}" value="${escapeHtml(task.dueDate || "")}" />
+            </div>
+            <div class="edit-actions">
+              <button class="small-btn" data-action="save-edit" data-id="${task.id}">Uložit změny</button>
+              <button class="small-btn" data-action="cancel-edit" data-id="${task.id}">Storno</button>
+            </div>
+          </div>` : ""}
           ${detailsOpen ? `
           <div class="task-details">
             <textarea data-notes-for="${task.id}" placeholder="Poznámka k úkolu...">${notes}</textarea>
@@ -1234,12 +1285,46 @@
         if (action === "delete") {
           delete taskExtras[id];
           saveTaskExtras();
+          expandedTaskIds.delete(id);
+          editingTaskIds.delete(id);
           tasks.splice(idx, 1);
         } else if (action === "advance") {
           const next = nextStatus(tasks[idx].status);
           tasks[idx].status = next;
           tasks[idx].completedAt = next === "done" ? Date.now() : null;
           tasks[idx].updatedAt = Date.now();
+        } else if (action === "toggle-edit") {
+          if (editingTaskIds.has(id)) editingTaskIds.delete(id);
+          else editingTaskIds.add(id);
+          render();
+          return;
+        } else if (action === "cancel-edit") {
+          editingTaskIds.delete(id);
+          render();
+          return;
+        } else if (action === "save-edit") {
+          const getVal = (field) => {
+            const input = container.querySelector(`[data-edit-field="${field}"][data-id="${id}"]`);
+            return input ? input.value : "";
+          };
+          const newTitle = getVal("title").trim();
+          if (!newTitle) {
+            alert("Název úkolu nesmí být prázdný.");
+            return;
+          }
+          const newStatus = normalizeStatus(getVal("status"));
+          tasks[idx].title = newTitle;
+          tasks[idx].priority = normalizePriority(getVal("priority"));
+          tasks[idx].status = newStatus;
+          tasks[idx].product = normalizeProduct(getVal("product"));
+          tasks[idx].requestType = normalizeRequestType(getVal("requestType"));
+          tasks[idx].dueDate = normalizeDate(getVal("dueDate"));
+          tasks[idx].completedAt = newStatus === "done" ? (tasks[idx].completedAt || Date.now()) : null;
+          tasks[idx].updatedAt = Date.now();
+          editingTaskIds.delete(id);
+          markDirtyAndSave();
+          render();
+          return;
         } else if (action === "toggle-details") {
           if (expandedTaskIds.has(id)) expandedTaskIds.delete(id);
           else expandedTaskIds.add(id);
