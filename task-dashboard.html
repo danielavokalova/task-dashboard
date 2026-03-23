@@ -189,6 +189,14 @@
       font-weight: 700;
       letter-spacing: 0.1px;
     }
+    .tag-clickable {
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+    .tag-clickable:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    }
 
     .status-todo {
       background: #d8e9ff;
@@ -725,6 +733,18 @@
       return values.map((value) => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(value)}</option>`).join("");
     }
 
+    function quickPickLabel(promptLabel, values, current) {
+      const lines = values.map((v, i) => `${i + 1}) ${v}`).join("\n");
+      const raw = prompt(`${promptLabel}\n\n${lines}\n\nZadej cislo nebo hodnotu:`, current || "");
+      if (raw === null) return null;
+      const val = String(raw).trim();
+      if (!val) return current;
+      const idx = Number(val);
+      if (Number.isFinite(idx) && idx >= 1 && idx <= values.length) return values[idx - 1];
+      const byValue = values.find((v) => v.toLowerCase() === val.toLowerCase());
+      return byValue || current;
+    }
+
     function filteredTasks() {
       const query = el.searchInput.value.trim().toLowerCase();
       const status = el.filterStatus.value;
@@ -812,11 +832,11 @@
           <div class="task-main">
             <h3 class="task-title">${escapeHtml(task.title)}</h3>
             <div class="task-meta">
-              <span class="tag status-${task.status}">${statusLabel(task.status)}</span>
-              <span class="tag priority-${task.priority}">Priorita: ${priorityLabel(task.priority)}</span>
-              <span class="tag">Produkt: ${escapeHtml(task.product || "jiné")}</span>
-              <span class="tag">Typ: ${escapeHtml(task.requestType || "operativa")}</span>
-              <span class="tag ${overdue ? "overdue" : ""}">
+              <span class="tag tag-clickable status-${task.status}" data-action="quick-status" data-id="${task.id}" title="Klikni pro rychlou změnu stavu">${statusLabel(task.status)}</span>
+              <span class="tag tag-clickable priority-${task.priority}" data-action="quick-priority" data-id="${task.id}" title="Klikni pro rychlou změnu priority">Priorita: ${priorityLabel(task.priority)}</span>
+              <span class="tag tag-clickable" data-action="quick-product" data-id="${task.id}" title="Klikni pro rychlou změnu produktu">Produkt: ${escapeHtml(task.product || "jiné")}</span>
+              <span class="tag tag-clickable" data-action="quick-request-type" data-id="${task.id}" title="Klikni pro rychlou změnu typu požadavku">Typ: ${escapeHtml(task.requestType || "operativa")}</span>
+              <span class="tag tag-clickable ${overdue ? "overdue" : ""}" data-action="quick-due-date" data-id="${task.id}" title="Klikni pro rychlou změnu termínu">
                 ${overdue ? "Po termínu: " : "Termín: "}${formatDueDate(task.dueDate)}
               </span>
             </div>
@@ -1275,10 +1295,11 @@
 
     function wireTaskActions(container) {
       container.addEventListener("click", (e) => {
-        const btn = e.target.closest("button");
-        if (!btn) return;
-        const action = btn.dataset.action;
-        const id = btn.dataset.id;
+        const trigger = e.target.closest("[data-action]");
+        if (!trigger) return;
+        const action = trigger.dataset.action;
+        const id = trigger.dataset.id;
+        if (!id) return;
         const idx = tasks.findIndex((t) => t.id === id);
         if (idx < 0) return;
 
@@ -1339,7 +1360,7 @@
           render();
           return;
         } else if (action === "remove-attachment") {
-          const attIdx = Number(btn.dataset.idx);
+          const attIdx = Number(trigger.dataset.idx);
           const extra = getTaskExtra(id);
           if (Number.isFinite(attIdx) && attIdx >= 0 && attIdx < extra.attachments.length) {
             extra.attachments.splice(attIdx, 1);
@@ -1347,6 +1368,45 @@
             render();
           }
           return;
+        } else if (action === "quick-status") {
+          const next = nextStatus(tasks[idx].status);
+          tasks[idx].status = next;
+          tasks[idx].completedAt = next === "done" ? (tasks[idx].completedAt || Date.now()) : null;
+          tasks[idx].updatedAt = Date.now();
+        } else if (action === "quick-priority") {
+          const order = ["low", "medium", "high"];
+          const i = order.indexOf(tasks[idx].priority);
+          tasks[idx].priority = order[(i + 1) % order.length];
+          tasks[idx].updatedAt = Date.now();
+        } else if (action === "quick-product") {
+          const picked = quickPickLabel(
+            "Vyber produkt",
+            ["GOL IBE", "TG", "FWD", "CM", "TM", "jiné"],
+            tasks[idx].product
+          );
+          if (!picked) return;
+          tasks[idx].product = normalizeProduct(picked);
+          tasks[idx].updatedAt = Date.now();
+        } else if (action === "quick-request-type") {
+          const picked = quickPickLabel(
+            "Vyber typ požadavku",
+            ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "jiné"],
+            tasks[idx].requestType
+          );
+          if (!picked) return;
+          tasks[idx].requestType = normalizeRequestType(picked);
+          tasks[idx].updatedAt = Date.now();
+        } else if (action === "quick-due-date") {
+          const input = prompt("Zadej termín (YYYY-MM-DD). Nech prázdné pro smazání termínu.", tasks[idx].dueDate || "");
+          if (input === null) return;
+          const trimmed = input.trim();
+          const normalized = normalizeDate(trimmed);
+          if (trimmed && !normalized) {
+            alert("Neplatný formát data. Použij YYYY-MM-DD.");
+            return;
+          }
+          tasks[idx].dueDate = normalized;
+          tasks[idx].updatedAt = Date.now();
         }
         markDirtyAndSave();
         render();
