@@ -120,7 +120,7 @@
 
     .toolbar {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr auto auto auto auto auto auto auto;
+      grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto auto auto auto auto auto auto;
       gap: 10px;
       margin-bottom: 12px;
     }
@@ -145,7 +145,7 @@
 
     .new-task-form {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr auto;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto;
       gap: 10px;
       margin-top: 10px;
     }
@@ -385,6 +385,27 @@
           <option value="medium">Střední</option>
           <option value="high">Vysoká</option>
         </select>
+        <select id="filterProduct">
+          <option value="all">Všechny produkty</option>
+          <option value="GOL IBE">GOL IBE</option>
+          <option value="TG">TG</option>
+          <option value="FWD">FWD</option>
+          <option value="CM">CM</option>
+          <option value="TM">TM</option>
+          <option value="jiné">jiné</option>
+        </select>
+        <select id="filterRequestType">
+          <option value="all">Všechny typy</option>
+          <option value="implementace">implementace</option>
+          <option value="operativa">operativa</option>
+          <option value="nastavení">nastavení</option>
+          <option value="bug">bug</option>
+          <option value="meeting">meeting</option>
+          <option value="analýza">analýza</option>
+          <option value="podpora">podpora</option>
+          <option value="reporting">reporting</option>
+          <option value="jiné">jiné</option>
+        </select>
         <select id="sortBy">
           <option value="dueAsc">Termín: nejbližší</option>
           <option value="dueDesc">Termín: nejpozdější</option>
@@ -412,6 +433,25 @@
           <option value="todo" selected>K vyřízení</option>
           <option value="doing">Rozpracované</option>
           <option value="done">Dokončené</option>
+        </select>
+        <select id="newProduct">
+          <option value="GOL IBE">GOL IBE</option>
+          <option value="TG">TG</option>
+          <option value="FWD">FWD</option>
+          <option value="CM">CM</option>
+          <option value="TM">TM</option>
+          <option value="jiné">jiné</option>
+        </select>
+        <select id="newRequestType">
+          <option value="implementace">implementace</option>
+          <option value="operativa" selected>operativa</option>
+          <option value="nastavení">nastavení</option>
+          <option value="bug">bug</option>
+          <option value="meeting">meeting</option>
+          <option value="analýza">analýza</option>
+          <option value="podpora">podpora</option>
+          <option value="reporting">reporting</option>
+          <option value="jiné">jiné</option>
         </select>
         <input id="newDueDate" type="date" />
         <button id="addTaskBtn" class="btn-primary">Přidat úkol</button>
@@ -484,10 +524,14 @@
       searchInput: document.getElementById("searchInput"),
       filterStatus: document.getElementById("filterStatus"),
       filterPriority: document.getElementById("filterPriority"),
+      filterProduct: document.getElementById("filterProduct"),
+      filterRequestType: document.getElementById("filterRequestType"),
       sortBy: document.getElementById("sortBy"),
       newTitle: document.getElementById("newTitle"),
       newPriority: document.getElementById("newPriority"),
       newStatus: document.getElementById("newStatus"),
+      newProduct: document.getElementById("newProduct"),
+      newRequestType: document.getElementById("newRequestType"),
       newDueDate: document.getElementById("newDueDate"),
       addTaskBtn: document.getElementById("addTaskBtn"),
       resetDemo: document.getElementById("resetDemo"),
@@ -560,13 +604,13 @@
         return t.toISOString().slice(0, 10);
       };
       return [
-        createTask("Připravit měsíční report", "high", "doing", plusDays(1)),
-        createTask("Zkontrolovat backlog", "medium", "todo", plusDays(3)),
-        createTask("Uzavřít sprint retrospektivu", "low", "done", plusDays(-1))
+        createTask("Připravit měsíční report", "high", "doing", plusDays(1), "TM", "reporting"),
+        createTask("Zkontrolovat backlog", "medium", "todo", plusDays(3), "GOL IBE", "operativa"),
+        createTask("Uzavřít sprint retrospektivu", "low", "done", plusDays(-1), "TG", "meeting")
       ];
     }
 
-    function createTask(title, priority, status, dueDate) {
+    function createTask(title, priority, status, dueDate, product, requestType) {
       const normalizedStatus = normalizeStatus(status);
       const now = Date.now();
       return {
@@ -575,6 +619,8 @@
         priority: normalizePriority(priority),
         status: normalizedStatus,
         dueDate: normalizeDate(dueDate),
+        product: normalizeProduct(product),
+        requestType: normalizeRequestType(requestType),
         createdAt: now,
         completedAt: normalizedStatus === "done" ? now : null,
         updatedAt: now
@@ -595,6 +641,8 @@
         priority: normalizePriority(task.priority),
         status,
         dueDate: normalizeDate(task.dueDate),
+        product: normalizeProduct(task.product),
+        requestType: normalizeRequestType(task.requestType),
         createdAt,
         completedAt: status === "done" ? (completedAt || updatedAt) : null,
         updatedAt
@@ -607,6 +655,16 @@
 
     function normalizePriority(value) {
       return ["low", "medium", "high"].includes(value) ? value : "medium";
+    }
+
+    function normalizeProduct(value) {
+      const allowed = ["GOL IBE", "TG", "FWD", "CM", "TM", "jiné"];
+      return allowed.includes(value) ? value : "jiné";
+    }
+
+    function normalizeRequestType(value) {
+      const allowed = ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "jiné"];
+      return allowed.includes(value) ? value : "operativa";
     }
 
     function normalizeDate(value) {
@@ -645,13 +703,17 @@
       const query = el.searchInput.value.trim().toLowerCase();
       const status = el.filterStatus.value;
       const priority = el.filterPriority.value;
+      const product = el.filterProduct.value;
+      const requestType = el.filterRequestType.value;
       const sortBy = el.sortBy.value;
 
       const out = tasks.filter((t) => {
         const q = !query || t.title.toLowerCase().includes(query);
         const s = status === "all" || t.status === status;
         const p = priority === "all" || t.priority === priority;
-        return q && s && p;
+        const pr = product === "all" || t.product === product;
+        const rt = requestType === "all" || t.requestType === requestType;
+        return q && s && p && pr && rt;
       });
 
       out.sort((a, b) => {
@@ -725,6 +787,8 @@
             <div class="task-meta">
               <span class="tag status-${task.status}">${statusLabel(task.status)}</span>
               <span class="tag priority-${task.priority}">Priorita: ${priorityLabel(task.priority)}</span>
+              <span class="tag">Produkt: ${escapeHtml(task.product || "jiné")}</span>
+              <span class="tag">Typ: ${escapeHtml(task.requestType || "operativa")}</span>
               <span class="tag ${overdue ? "overdue" : ""}">
                 ${overdue ? "Po termínu: " : "Termín: "}${formatDueDate(task.dueDate)}
               </span>
@@ -811,7 +875,9 @@
         title,
         el.newPriority.value,
         el.newStatus.value,
-        el.newDueDate.value
+        el.newDueDate.value,
+        el.newProduct.value,
+        el.newRequestType.value
       );
       tasks.unshift(task);
       markDirtyAndSave();
@@ -918,12 +984,14 @@
       };
     }
 
-    function cloudRowToTask(row) {
+    function cloudRowToTask(row, fallbackTask) {
       return normalizeTask({
         id: row.id,
         title: row.title,
         priority: row.priority,
         status: row.status,
+        product: row.product || (fallbackTask ? fallbackTask.product : "jiné"),
+        requestType: row.request_type || (fallbackTask ? fallbackTask.requestType : "operativa"),
         dueDate: row.due_date || "",
         createdAt: row.created_at_ms,
         completedAt: row.completed_at_ms,
@@ -965,7 +1033,8 @@
         return;
       }
       if (data && data.length) {
-        tasks = data.map(cloudRowToTask);
+        const currentById = new Map(tasks.map((t) => [t.id, t]));
+        tasks = data.map((row) => cloudRowToTask(row, currentById.get(row.id)));
         hasUnsyncedLocalChanges = false;
         saveTasks();
         render();
@@ -1000,7 +1069,8 @@
       const { data, error } = await supabaseClient.from(CLOUD_TABLE).select("*").order("updated_at_ms", { ascending: false });
       if (error) throw error;
       if (!data) return;
-      const remoteTasks = data.map(cloudRowToTask);
+      const currentById = new Map(tasks.map((t) => [t.id, t]));
+      const remoteTasks = data.map((row) => cloudRowToTask(row, currentById.get(row.id)));
       if (JSON.stringify(remoteTasks) !== JSON.stringify(tasks)) {
         tasks = remoteTasks;
         saveTasks();
@@ -1060,8 +1130,8 @@
     }
 
     function exportCsv() {
-      const header = ["id", "title", "priority", "status", "dueDate", "createdAt"];
-      const rows = tasks.map((t) => [t.id, t.title, t.priority, t.status, t.dueDate, t.createdAt]);
+      const header = ["id", "title", "priority", "status", "product", "requestType", "dueDate", "createdAt"];
+      const rows = tasks.map((t) => [t.id, t.title, t.priority, t.status, t.product, t.requestType, t.dueDate, t.createdAt]);
       const csv = [header, ...rows].map((row) => row.map(toCsvValue).join(",")).join("\r\n");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
@@ -1106,28 +1176,30 @@
       }
 
       const headers = parseCsvLine(lines[0]).map((h) => h.trim());
-      const expected = ["id", "title", "priority", "status", "dueDate", "createdAt"];
+      const expected = ["id", "title", "priority", "status", "product", "requestType", "dueDate", "createdAt"];
       const isValidHeader = expected.every((key, idx) => headers[idx] === key);
       if (!isValidHeader) {
-        alert("Neplatná hlavička CSV. Očekávám: id,title,priority,status,dueDate,createdAt");
+        alert("Neplatná hlavička CSV. Očekávám: id,title,priority,status,product,requestType,dueDate,createdAt");
         return;
       }
 
       const imported = [];
       for (let i = 1; i < lines.length; i += 1) {
         const cols = parseCsvLine(lines[i]);
-        if (cols.length < 6) continue;
+        if (cols.length < 8) continue;
 
         const id = cols[0] || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
         const title = (cols[1] || "").trim();
         if (!title) continue;
         const priority = normalizePriority(cols[2]);
         const status = normalizeStatus(cols[3]);
-        const dueDate = normalizeDate(cols[4]);
-        const createdAtRaw = Number(cols[5]);
+        const product = normalizeProduct(cols[4]);
+        const requestType = normalizeRequestType(cols[5]);
+        const dueDate = normalizeDate(cols[6]);
+        const createdAtRaw = Number(cols[7]);
         const createdAt = Number.isFinite(createdAtRaw) ? createdAtRaw : Date.now();
 
-        imported.push(normalizeTask({ id, title, priority, status, dueDate, createdAt }));
+        imported.push(normalizeTask({ id, title, priority, status, product, requestType, dueDate, createdAt }));
       }
 
       if (!imported.length) {
@@ -1272,7 +1344,7 @@
       if (e.key === "Enter") addTask();
     });
 
-    ["searchInput", "filterStatus", "filterPriority", "sortBy"].forEach((key) => {
+    ["searchInput", "filterStatus", "filterPriority", "filterProduct", "filterRequestType", "sortBy"].forEach((key) => {
       el[key].addEventListener("input", render);
       el[key].addEventListener("change", render);
     });
