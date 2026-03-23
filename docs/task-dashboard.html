@@ -12,7 +12,7 @@
       --bg: #f5f9f7;
       --bg-soft: #ecf6f1;
       --panel: #ffffff;
-      --panel-2: #f6fbf8;
+      --panel-2: #eef8f3;
       --text: #0f2a21;
       --muted: #5f7a71;
       --accent: #11a868;
@@ -21,7 +21,8 @@
       --doing: #d9821a;
       --done: #10a468;
       --border: #d9e9e1;
-      --shadow: 0 12px 30px rgba(16, 84, 58, 0.08);
+      --shadow: 0 16px 34px rgba(16, 84, 58, 0.12);
+      --tile-shadow: 0 14px 28px rgba(8, 58, 38, 0.14);
       --btn-secondary-bg: #eaf6ff;
       --btn-secondary-border: #b9daf5;
       --btn-secondary-text: #1f5d96;
@@ -69,7 +70,7 @@
     }
 
     .card {
-      background: var(--panel);
+      background: linear-gradient(180deg, #ffffff 0%, #f5fcf9 100%);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 16px;
@@ -160,13 +161,13 @@
     .task-item {
       border: 1px solid var(--border);
       border-radius: 10px;
-      background: #ffffff;
+      background: linear-gradient(180deg, #ffffff 0%, #f4fbf7 100%);
       padding: 12px;
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 10px;
       align-items: start;
-      box-shadow: 0 6px 14px rgba(12, 53, 39, 0.06);
+      box-shadow: var(--tile-shadow);
     }
 
     .task-item[draggable="true"] { cursor: grab; }
@@ -247,12 +248,13 @@
     }
 
     .kanban-col {
-      background: #f7fcfa;
-      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #f6fcf9 0%, #edf8f3 100%);
+      border: 1px solid #cfe5dc;
       border-radius: 10px;
       min-height: 350px;
       display: grid;
       grid-template-rows: auto 1fr;
+      box-shadow: 0 10px 22px rgba(13, 78, 52, 0.1);
     }
 
     .kanban-head {
