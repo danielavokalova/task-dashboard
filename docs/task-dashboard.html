@@ -779,11 +779,13 @@
         updateCloudStatus("Cloud: pripojeno");
         startCloudPolling();
         await initialCloudSync();
+        alert("Cloud uspesne pripojen.");
         return true;
-      } catch {
+      } catch (err) {
         cloudConnected = false;
         updateCloudStatus("Cloud: chyba pripojeni");
-        alert("Cloud se nepodarilo pripojit. Zkontroluj URL/key a SQL tabulku v Supabase.");
+        const message = err && err.message ? err.message : "Neznamy problem";
+        alert(`Cloud se nepodarilo pripojit.\n\nDetail: ${message}\n\nZkontroluj URL, publishable key a SQL tabulku v Supabase.`);
         return false;
       }
     }
@@ -840,8 +842,16 @@
       }
     }
 
-    async function runCloudSync() {
-      if (!cloudConnected || syncInProgress) return;
+    async function runCloudSync(options) {
+      const opts = options || {};
+      if (!cloudConnected) {
+        updateCloudStatus("Cloud: nepripojeno");
+        if (opts.notifyIfDisconnected) {
+          alert("Cloud neni pripojeny. Klikni nejdriv na 'Cloud pripojeni'.");
+        }
+        return;
+      }
+      if (syncInProgress) return;
       syncInProgress = true;
       updateCloudStatus("Cloud: synchronizace...");
       try {
@@ -850,8 +860,14 @@
         }
         await pullTasksFromCloud();
         updateCloudStatus("Cloud: aktualni");
+        if (opts.notifyOnSuccess) {
+          alert("Synchronizace hotova.");
+        }
       } catch {
         updateCloudStatus("Cloud: chyba synchronizace");
+        if (opts.notifyOnError) {
+          alert("Synchronizace selhala. Zkus znovu nebo zkontroluj pripojeni v Supabase.");
+        }
       } finally {
         syncInProgress = false;
       }
@@ -1044,7 +1060,11 @@
       await connectCloud(url.trim(), key.trim());
     });
     el.syncNowBtn.addEventListener("click", () => {
-      runCloudSync();
+      runCloudSync({
+        notifyIfDisconnected: true,
+        notifyOnSuccess: true,
+        notifyOnError: true
+      });
     });
     el.csvFileInput.addEventListener("change", () => {
       const file = el.csvFileInput.files && el.csvFileInput.files[0];
