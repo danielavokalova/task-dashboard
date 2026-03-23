@@ -22,6 +22,9 @@
       --done: #10a468;
       --border: #d9e9e1;
       --shadow: 0 12px 30px rgba(16, 84, 58, 0.08);
+      --btn-secondary-bg: #eaf6ff;
+      --btn-secondary-border: #b9daf5;
+      --btn-secondary-text: #1f5d96;
     }
 
     * { box-sizing: border-box; }
@@ -95,7 +98,8 @@
     }
 
     button { cursor: pointer; transition: 0.15s ease; }
-    button:hover { opacity: 0.9; }
+    button:hover { opacity: 0.95; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
     .btn-primary {
       background: var(--accent);
       color: #ffffff;
@@ -105,6 +109,12 @@
     .btn-primary:hover {
       background: var(--accent-2);
       opacity: 1;
+    }
+    button:not(.btn-primary) {
+      background: var(--btn-secondary-bg);
+      border-color: var(--btn-secondary-border);
+      color: var(--btn-secondary-text);
+      font-weight: 600;
     }
 
     .toolbar {
@@ -173,17 +183,48 @@
 
     .tag {
       border-radius: 999px;
-      padding: 4px 8px;
+      padding: 5px 10px;
       border: 1px solid var(--border);
+      font-weight: 700;
+      letter-spacing: 0.1px;
     }
 
-    .status-todo { background: rgba(34, 111, 223, 0.12); color: #225dc0; }
-    .status-doing { background: rgba(217, 130, 26, 0.14); color: #b5680d; }
-    .status-done { background: rgba(16, 164, 104, 0.14); color: #0d8a57; }
-    .priority-low { color: #225dc0; }
-    .priority-medium { color: #b5680d; }
-    .priority-high { color: #d14343; }
-    .overdue { color: #f87171; font-weight: 600; }
+    .status-todo {
+      background: #d8e9ff;
+      color: #0e4aa3;
+      border-color: #8bb5f2;
+    }
+    .status-doing {
+      background: #ffe7bf;
+      color: #9a5300;
+      border-color: #f0b767;
+    }
+    .status-done {
+      background: #d5f5e7;
+      color: #0b7d4d;
+      border-color: #7bd5ad;
+    }
+    .priority-low {
+      color: #0f5eb1;
+      border-color: #9ac4f6;
+      background: #e8f3ff;
+    }
+    .priority-medium {
+      color: #975300;
+      border-color: #efbc7d;
+      background: #fff0d9;
+    }
+    .priority-high {
+      color: #a11e2f;
+      border-color: #f2a0ad;
+      background: #ffe4e8;
+    }
+    .overdue {
+      color: #b4233a;
+      font-weight: 700;
+      border-color: #ea8e9d;
+      background: #ffe2e7;
+    }
 
     .task-actions {
       display: grid;
@@ -221,6 +262,7 @@
       justify-content: space-between;
       align-items: center;
       font-weight: 600;
+      background: linear-gradient(180deg, #ffffff, #f2faf6);
     }
 
     .kanban-dropzone {
