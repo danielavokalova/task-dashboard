@@ -4,25 +4,34 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard úkolů</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0f172a;
-      --panel: #111827;
-      --panel-2: #1f2937;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
-      --accent: #22c55e;
-      --todo: #60a5fa;
-      --doing: #f59e0b;
-      --done: #22c55e;
-      --border: #374151;
+      --bg: #f5f9f7;
+      --bg-soft: #ecf6f1;
+      --panel: #ffffff;
+      --panel-2: #f6fbf8;
+      --text: #0f2a21;
+      --muted: #5f7a71;
+      --accent: #11a868;
+      --accent-2: #0e8a56;
+      --todo: #226fdf;
+      --doing: #d9821a;
+      --done: #10a468;
+      --border: #d9e9e1;
+      --shadow: 0 12px 30px rgba(16, 84, 58, 0.08);
     }
 
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Segoe UI", Arial, sans-serif;
-      background: linear-gradient(180deg, #0b1222 0%, var(--bg) 100%);
+      font-family: "Manrope", "Segoe UI", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 5% 5%, #d9f4e8 0, transparent 28%),
+        radial-gradient(circle at 95% 10%, #d8eef8 0, transparent 30%),
+        linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
       color: var(--text);
       min-height: 100vh;
     }
@@ -37,9 +46,14 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       gap: 12px;
       flex-wrap: wrap;
+      background: linear-gradient(120deg, #ffffff, #eef9f3 70%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--shadow);
     }
 
     h1 { margin: 0; font-size: 28px; }
@@ -52,10 +66,11 @@
     }
 
     .card {
-      background: rgba(17, 24, 39, 0.92);
+      background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 16px;
+      box-shadow: var(--shadow);
     }
 
     .stat-value {
@@ -76,15 +91,20 @@
       border-radius: 8px;
       padding: 10px 12px;
       font-size: 14px;
+      font-family: inherit;
     }
 
     button { cursor: pointer; transition: 0.15s ease; }
     button:hover { opacity: 0.9; }
     .btn-primary {
       background: var(--accent);
-      color: #052e16;
+      color: #ffffff;
       border: none;
       font-weight: 600;
+    }
+    .btn-primary:hover {
+      background: var(--accent-2);
+      opacity: 1;
     }
 
     .toolbar {
@@ -108,7 +128,8 @@
 
     .view-switch button.active {
       border-color: var(--accent);
-      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25);
+      box-shadow: 0 0 0 2px rgba(17, 168, 104, 0.2);
+      background: #e9f8f2;
     }
 
     .new-task-form {
@@ -129,12 +150,13 @@
     .task-item {
       border: 1px solid var(--border);
       border-radius: 10px;
-      background: #0b1325;
+      background: #ffffff;
       padding: 12px;
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 10px;
       align-items: start;
+      box-shadow: 0 6px 14px rgba(12, 53, 39, 0.06);
     }
 
     .task-item[draggable="true"] { cursor: grab; }
@@ -155,12 +177,12 @@
       border: 1px solid var(--border);
     }
 
-    .status-todo { background: rgba(96, 165, 250, 0.15); color: #93c5fd; }
-    .status-doing { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-    .status-done { background: rgba(34, 197, 94, 0.15); color: #86efac; }
-    .priority-low { color: #93c5fd; }
-    .priority-medium { color: #fbbf24; }
-    .priority-high { color: #fca5a5; }
+    .status-todo { background: rgba(34, 111, 223, 0.12); color: #225dc0; }
+    .status-doing { background: rgba(217, 130, 26, 0.14); color: #b5680d; }
+    .status-done { background: rgba(16, 164, 104, 0.14); color: #0d8a57; }
+    .priority-low { color: #225dc0; }
+    .priority-medium { color: #b5680d; }
+    .priority-high { color: #d14343; }
     .overdue { color: #f87171; font-weight: 600; }
 
     .task-actions {
@@ -184,7 +206,7 @@
     }
 
     .kanban-col {
-      background: #0b1325;
+      background: #f7fcfa;
       border: 1px solid var(--border);
       border-radius: 10px;
       min-height: 350px;
@@ -210,8 +232,8 @@
     }
 
     .kanban-dropzone.drag-over {
-      background: rgba(34, 197, 94, 0.09);
-      outline: 1px dashed rgba(34, 197, 94, 0.8);
+      background: rgba(17, 168, 104, 0.09);
+      outline: 1px dashed rgba(17, 168, 104, 0.7);
       border-radius: 8px;
     }
 
@@ -231,7 +253,7 @@
     <div class="header">
       <div>
         <h1>Dashboard úkolů</h1>
-        <div class="muted">Sledování úkolů se seznamem, Kanbanem a CSV import/exportem</div>
+        <div class="muted">Moderní přehled práce: jednoduše, chytře, rychle.</div>
       </div>
       <button id="resetDemo" title="Smaže všechny úkoly">Vymazat vše</button>
     </div>
