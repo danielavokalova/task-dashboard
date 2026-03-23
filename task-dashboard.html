@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard úkolů</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #22c55e;
+      --todo: #60a5fa;
+      --doing: #f59e0b;
+      --done: #22c55e;
+      --border: #374151;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1222 0%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    h1 { margin: 0; font-size: 28px; }
+    .muted { color: var(--muted); }
+    .grid { display: grid; gap: 16px; }
+
+    .stats {
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: rgba(17, 24, 39, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 8px 0 0;
+    }
+
+    input, select, button {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+
+    button { cursor: pointer; transition: 0.15s ease; }
+    button:hover { opacity: 0.9; }
+    .btn-primary {
+      background: var(--accent);
+      color: #052e16;
+      border: none;
+      font-weight: 600;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto auto auto;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .view-switch {
+      display: flex;
+      gap: 8px;
+    }
+
+    .view-switch button.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25);
+    }
+
+    .new-task-form {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr auto;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .task-list {
+      display: grid;
+      gap: 10px;
+      max-height: 58vh;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .task-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #0b1325;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .task-item[draggable="true"] { cursor: grab; }
+    .task-item.dragging { opacity: 0.65; }
+    .task-main { display: grid; gap: 6px; }
+    .task-title { margin: 0; font-size: 16px; }
+
+    .task-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 12px;
+    }
+
+    .tag {
+      border-radius: 999px;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+    }
+
+    .status-todo { background: rgba(96, 165, 250, 0.15); color: #93c5fd; }
+    .status-doing { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .status-done { background: rgba(34, 197, 94, 0.15); color: #86efac; }
+    .priority-low { color: #93c5fd; }
+    .priority-medium { color: #fbbf24; }
+    .priority-high { color: #fca5a5; }
+    .overdue { color: #f87171; font-weight: 600; }
+
+    .task-actions {
+      display: grid;
+      gap: 8px;
+      min-width: 160px;
+    }
+
+    .empty {
+      padding: 20px;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .kanban-col {
+      background: #0b1325;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      min-height: 350px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .kanban-head {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+    }
+
+    .kanban-dropzone {
+      padding: 10px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+      min-height: 280px;
+    }
+
+    .kanban-dropzone.drag-over {
+      background: rgba(34, 197, 94, 0.09);
+      outline: 1px dashed rgba(34, 197, 94, 0.8);
+      border-radius: 8px;
+    }
+
+    .hidden { display: none; }
+
+    @media (max-width: 980px) {
+      .toolbar { grid-template-columns: 1fr 1fr; }
+      .new-task-form { grid-template-columns: 1fr 1fr; }
+      .task-item { grid-template-columns: 1fr; }
+      .task-actions { min-width: 0; }
+      .kanban-board { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Dashboard úkolů</h1>
+        <div class="muted">Sledování úkolů se seznamem, Kanbanem a CSV import/exportem</div>
+      </div>
+      <button id="resetDemo" title="Smaže všechny úkoly">Vymazat vše</button>
+    </div>
+
+    <div class="grid stats">
+      <div class="card"><div class="muted">Celkem</div><div class="stat-value" id="statTotal">0</div></div>
+      <div class="card"><div class="muted">K vyřízení</div><div class="stat-value" id="statTodo">0</div></div>
+      <div class="card"><div class="muted">Rozpracované</div><div class="stat-value" id="statDoing">0</div></div>
+      <div class="card"><div class="muted">Dokončené</div><div class="stat-value" id="statDone">0</div></div>
+      <div class="card"><div class="muted">Po termínu</div><div class="stat-value" id="statOverdue">0</div></div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <input id="searchInput" type="text" placeholder="Hledat podle názvu..." />
+        <select id="filterStatus">
+          <option value="all">Všechny stavy</option>
+          <option value="todo">K vyřízení</option>
+          <option value="doing">Rozpracované</option>
+          <option value="done">Dokončené</option>
+        </select>
+        <select id="filterPriority">
+          <option value="all">Všechny priority</option>
+          <option value="low">Nízká</option>
+          <option value="medium">Střední</option>
+          <option value="high">Vysoká</option>
+        </select>
+        <select id="sortBy">
+          <option value="dueAsc">Termín: nejbližší</option>
+          <option value="dueDesc">Termín: nejpozdější</option>
+          <option value="newest">Nejnovější</option>
+          <option value="oldest">Nejstarší</option>
+        </select>
+        <button id="exportCsvBtn">Export CSV</button>
+        <button id="importCsvBtn">Import CSV</button>
+      </div>
+      <input id="csvFileInput" type="file" accept=".csv,text/csv" class="hidden" />
+
+      <div class="new-task-form">
+        <input id="newTitle" type="text" placeholder="Název úkolu" />
+        <select id="newPriority">
+          <option value="low">Nízká priorita</option>
+          <option value="medium" selected>Střední priorita</option>
+          <option value="high">Vysoká priorita</option>
+        </select>
+        <select id="newStatus">
+          <option value="todo" selected>K vyřízení</option>
+          <option value="doing">Rozpracované</option>
+          <option value="done">Dokončené</option>
+        </select>
+        <input id="newDueDate" type="date" />
+        <button id="addTaskBtn" class="btn-primary">Přidat úkol</button>
+      </div>
+
+      <div class="view-switch" style="margin-top: 12px;">
+        <button id="listViewBtn" class="active" data-view="list">Seznam</button>
+        <button id="kanbanViewBtn" data-view="kanban">Kanban</button>
+      </div>
+    </div>
+
+    <div id="listContainer" class="card" style="margin-top: 16px;">
+      <div class="task-list" id="taskList"></div>
+    </div>
+
+    <div id="kanbanContainer" class="card hidden" style="margin-top: 16px;">
+      <div class="kanban-board">
+        <div class="kanban-col">
+          <div class="kanban-head"><span>K vyřízení</span><span id="todoCount">0</span></div>
+          <div class="kanban-dropzone" data-status="todo" id="colTodo"></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-head"><span>Rozpracované</span><span id="doingCount">0</span></div>
+          <div class="kanban-dropzone" data-status="doing" id="colDoing"></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-head"><span>Dokončené</span><span id="doneCount">0</span></div>
+          <div class="kanban-dropzone" data-status="done" id="colDone"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "taskDashboardDataV2";
+    const LEGACY_STORAGE_KEY = "taskDashboardDataV1";
+
+    let tasks = loadTasks();
+    let currentView = "list";
+    let draggingTaskId = null;
+
+    const el = {
+      statTotal: document.getElementById("statTotal"),
+      statTodo: document.getElementById("statTodo"),
+      statDoing: document.getElementById("statDoing"),
+      statDone: document.getElementById("statDone"),
+      statOverdue: document.getElementById("statOverdue"),
+      taskList: document.getElementById("taskList"),
+      colTodo: document.getElementById("colTodo"),
+      colDoing: document.getElementById("colDoing"),
+      colDone: document.getElementById("colDone"),
+      todoCount: document.getElementById("todoCount"),
+      doingCount: document.getElementById("doingCount"),
+      doneCount: document.getElementById("doneCount"),
+      searchInput: document.getElementById("searchInput"),
+      filterStatus: document.getElementById("filterStatus"),
+      filterPriority: document.getElementById("filterPriority"),
+      sortBy: document.getElementById("sortBy"),
+      newTitle: document.getElementById("newTitle"),
+      newPriority: document.getElementById("newPriority"),
+      newStatus: document.getElementById("newStatus"),
+      newDueDate: document.getElementById("newDueDate"),
+      addTaskBtn: document.getElementById("addTaskBtn"),
+      resetDemo: document.getElementById("resetDemo"),
+      listViewBtn: document.getElementById("listViewBtn"),
+      kanbanViewBtn: document.getElementById("kanbanViewBtn"),
+      listContainer: document.getElementById("listContainer"),
+      kanbanContainer: document.getElementById("kanbanContainer"),
+      exportCsvBtn: document.getElementById("exportCsvBtn"),
+      importCsvBtn: document.getElementById("importCsvBtn"),
+      csvFileInput: document.getElementById("csvFileInput")
+    };
+
+    function loadTasks() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : sampleTasks();
+        }
+        const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+        if (legacyRaw) {
+          const legacyParsed = JSON.parse(legacyRaw);
+          if (Array.isArray(legacyParsed)) return legacyParsed;
+        }
+        return sampleTasks();
+      } catch {
+        return sampleTasks();
+      }
+    }
+
+    function saveTasks() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    function sampleTasks() {
+      const today = new Date();
+      const plusDays = (d) => {
+        const t = new Date(today);
+        t.setDate(t.getDate() + d);
+        return t.toISOString().slice(0, 10);
+      };
+      return [
+        createTask("Připravit měsíční report", "high", "doing", plusDays(1)),
+        createTask("Zkontrolovat backlog", "medium", "todo", plusDays(3)),
+        createTask("Uzavřít sprint retrospektivu", "low", "done", plusDays(-1))
+      ];
+    }
+
+    function createTask(title, priority, status, dueDate) {
+      return {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+        title: title.trim(),
+        priority: normalizePriority(priority),
+        status: normalizeStatus(status),
+        dueDate: normalizeDate(dueDate),
+        createdAt: Date.now()
+      };
+    }
+
+    function normalizeStatus(value) {
+      return ["todo", "doing", "done"].includes(value) ? value : "todo";
+    }
+
+    function normalizePriority(value) {
+      return ["low", "medium", "high"].includes(value) ? value : "medium";
+    }
+
+    function normalizeDate(value) {
+      if (!value) return "";
+      return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+    }
+
+    function isOverdue(task) {
+      if (!task.dueDate || task.status === "done") return false;
+      const today = new Date();
+      const due = new Date(task.dueDate + "T23:59:59");
+      return due < today;
+    }
+
+    function formatDueDate(dateStr) {
+      if (!dateStr) return "Bez termínu";
+      const d = new Date(dateStr + "T00:00:00");
+      return d.toLocaleDateString("cs-CZ");
+    }
+
+    function nextStatus(current) {
+      if (current === "todo") return "doing";
+      if (current === "doing") return "done";
+      return "todo";
+    }
+
+    function statusLabel(status) {
+      return status === "todo" ? "K vyřízení" : status === "doing" ? "Rozpracované" : "Dokončené";
+    }
+
+    function priorityLabel(priority) {
+      return priority === "low" ? "Nízká" : priority === "medium" ? "Střední" : "Vysoká";
+    }
+
+    function filteredTasks() {
+      const query = el.searchInput.value.trim().toLowerCase();
+      const status = el.filterStatus.value;
+      const priority = el.filterPriority.value;
+      const sortBy = el.sortBy.value;
+
+      const out = tasks.filter((t) => {
+        const q = !query || t.title.toLowerCase().includes(query);
+        const s = status === "all" || t.status === status;
+        const p = priority === "all" || t.priority === priority;
+        return q && s && p;
+      });
+
+      out.sort((a, b) => {
+        if (sortBy === "newest") return b.createdAt - a.createdAt;
+        if (sortBy === "oldest") return a.createdAt - b.createdAt;
+        const da = a.dueDate ? new Date(a.dueDate).getTime() : (sortBy === "dueAsc" ? Infinity : -Infinity);
+        const db = b.dueDate ? new Date(b.dueDate).getTime() : (sortBy === "dueAsc" ? Infinity : -Infinity);
+        return sortBy === "dueAsc" ? da - db : db - da;
+      });
+
+      return out;
+    }
+
+    function updateStats() {
+      const total = tasks.length;
+      const todo = tasks.filter((t) => t.status === "todo").length;
+      const doing = tasks.filter((t) => t.status === "doing").length;
+      const done = tasks.filter((t) => t.status === "done").length;
+      const overdue = tasks.filter(isOverdue).length;
+
+      el.statTotal.textContent = total;
+      el.statTodo.textContent = todo;
+      el.statDoing.textContent = doing;
+      el.statDone.textContent = done;
+      el.statOverdue.textContent = overdue;
+      el.todoCount.textContent = todo;
+      el.doingCount.textContent = doing;
+      el.doneCount.textContent = done;
+    }
+
+    function taskCardHtml(task, draggable) {
+      const overdue = isOverdue(task);
+      return `
+        <div class="task-item" ${draggable ? 'draggable="true"' : ""} data-task-id="${task.id}">
+          <div class="task-main">
+            <h3 class="task-title">${escapeHtml(task.title)}</h3>
+            <div class="task-meta">
+              <span class="tag status-${task.status}">${statusLabel(task.status)}</span>
+              <span class="tag priority-${task.priority}">Priorita: ${priorityLabel(task.priority)}</span>
+              <span class="tag ${overdue ? "overdue" : ""}">
+                ${overdue ? "Po termínu: " : "Termín: "}${formatDueDate(task.dueDate)}
+              </span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <button data-action="advance" data-id="${task.id}">Posunout stav</button>
+            <button data-action="delete" data-id="${task.id}" style="color: #fecaca;">Smazat</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderList() {
+      const list = filteredTasks();
+      if (list.length === 0) {
+        el.taskList.innerHTML = '<div class="empty">Žádné úkoly pro aktuální filtr.</div>';
+        return;
+      }
+      el.taskList.innerHTML = list.map((task) => taskCardHtml(task, false)).join("");
+    }
+
+    function renderKanban() {
+      const list = filteredTasks();
+      const byStatus = { todo: [], doing: [], done: [] };
+      list.forEach((task) => byStatus[task.status].push(task));
+
+      el.colTodo.innerHTML = byStatus.todo.length
+        ? byStatus.todo.map((task) => taskCardHtml(task, true)).join("")
+        : '<div class="empty">Žádné úkoly</div>';
+      el.colDoing.innerHTML = byStatus.doing.length
+        ? byStatus.doing.map((task) => taskCardHtml(task, true)).join("")
+        : '<div class="empty">Žádné úkoly</div>';
+      el.colDone.innerHTML = byStatus.done.length
+        ? byStatus.done.map((task) => taskCardHtml(task, true)).join("")
+        : '<div class="empty">Žádné úkoly</div>';
+    }
+
+    function setView(view) {
+      currentView = view;
+      const isList = view === "list";
+      el.listContainer.classList.toggle("hidden", !isList);
+      el.kanbanContainer.classList.toggle("hidden", isList);
+      el.listViewBtn.classList.toggle("active", isList);
+      el.kanbanViewBtn.classList.toggle("active", !isList);
+      render();
+    }
+
+    function render() {
+      updateStats();
+      renderList();
+      renderKanban();
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function addTask() {
+      const title = el.newTitle.value.trim();
+      if (!title) {
+        alert("Zadej název úkolu.");
+        return;
+      }
+
+      const task = createTask(
+        title,
+        el.newPriority.value,
+        el.newStatus.value,
+        el.newDueDate.value
+      );
+      tasks.unshift(task);
+      saveTasks();
+      el.newTitle.value = "";
+      render();
+    }
+
+    function setTaskStatus(taskId, status) {
+      const idx = tasks.findIndex((t) => t.id === taskId);
+      if (idx < 0) return;
+      tasks[idx].status = normalizeStatus(status);
+      saveTasks();
+      render();
+    }
+
+    function toCsvValue(value) {
+      const escaped = String(value ?? "").replace(/"/g, '""');
+      return `"${escaped}"`;
+    }
+
+    function exportCsv() {
+      const header = ["id", "title", "priority", "status", "dueDate", "createdAt"];
+      const rows = tasks.map((t) => [t.id, t.title, t.priority, t.status, t.dueDate, t.createdAt]);
+      const csv = [header, ...rows].map((row) => row.map(toCsvValue).join(",")).join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `ukoly-dashboard-${stamp}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function parseCsvLine(line) {
+      const out = [];
+      let current = "";
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i += 1) {
+        const ch = line[i];
+        const next = line[i + 1];
+        if (ch === '"' && inQuotes && next === '"') {
+          current += '"';
+          i += 1;
+        } else if (ch === '"') {
+          inQuotes = !inQuotes;
+        } else if (ch === "," && !inQuotes) {
+          out.push(current);
+          current = "";
+        } else {
+          current += ch;
+        }
+      }
+      out.push(current);
+      return out;
+    }
+
+    function importCsvText(text) {
+      const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
+      if (lines.length < 2) {
+        alert("CSV je prázdné nebo neobsahuje žádná data.");
+        return;
+      }
+
+      const headers = parseCsvLine(lines[0]).map((h) => h.trim());
+      const expected = ["id", "title", "priority", "status", "dueDate", "createdAt"];
+      const isValidHeader = expected.every((key, idx) => headers[idx] === key);
+      if (!isValidHeader) {
+        alert("Neplatná hlavička CSV. Očekávám: id,title,priority,status,dueDate,createdAt");
+        return;
+      }
+
+      const imported = [];
+      for (let i = 1; i < lines.length; i += 1) {
+        const cols = parseCsvLine(lines[i]);
+        if (cols.length < 6) continue;
+
+        const id = cols[0] || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
+        const title = (cols[1] || "").trim();
+        if (!title) continue;
+        const priority = normalizePriority(cols[2]);
+        const status = normalizeStatus(cols[3]);
+        const dueDate = normalizeDate(cols[4]);
+        const createdAtRaw = Number(cols[5]);
+        const createdAt = Number.isFinite(createdAtRaw) ? createdAtRaw : Date.now();
+
+        imported.push({ id, title, priority, status, dueDate, createdAt });
+      }
+
+      if (!imported.length) {
+        alert("CSV neobsahuje žádné validní úkoly.");
+        return;
+      }
+
+      tasks = imported;
+      saveTasks();
+      render();
+      alert(`Import hotový: ${imported.length} úkolů.`);
+    }
+
+    function wireTaskActions(container) {
+      container.addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        const idx = tasks.findIndex((t) => t.id === id);
+        if (idx < 0) return;
+
+        if (action === "delete") {
+          tasks.splice(idx, 1);
+        } else if (action === "advance") {
+          tasks[idx].status = nextStatus(tasks[idx].status);
+        }
+        saveTasks();
+        render();
+      });
+    }
+
+    function wireKanbanDnD() {
+      document.addEventListener("dragstart", (e) => {
+        const card = e.target.closest(".task-item[draggable='true']");
+        if (!card) return;
+        draggingTaskId = card.dataset.taskId;
+        card.classList.add("dragging");
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", draggingTaskId);
+        }
+      });
+
+      document.addEventListener("dragend", (e) => {
+        const card = e.target.closest(".task-item[draggable='true']");
+        if (card) card.classList.remove("dragging");
+        draggingTaskId = null;
+        document.querySelectorAll(".kanban-dropzone").forEach((z) => z.classList.remove("drag-over"));
+      });
+
+      document.querySelectorAll(".kanban-dropzone").forEach((zone) => {
+        zone.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          zone.classList.add("drag-over");
+        });
+        zone.addEventListener("dragleave", () => {
+          zone.classList.remove("drag-over");
+        });
+        zone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          zone.classList.remove("drag-over");
+          const id = draggingTaskId || (e.dataTransfer ? e.dataTransfer.getData("text/plain") : "");
+          if (!id) return;
+          const targetStatus = zone.dataset.status;
+          setTaskStatus(id, targetStatus);
+        });
+      });
+    }
+
+    el.addTaskBtn.addEventListener("click", addTask);
+    el.newTitle.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addTask();
+    });
+
+    ["searchInput", "filterStatus", "filterPriority", "sortBy"].forEach((key) => {
+      el[key].addEventListener("input", render);
+      el[key].addEventListener("change", render);
+    });
+
+    el.listViewBtn.addEventListener("click", () => setView("list"));
+    el.kanbanViewBtn.addEventListener("click", () => setView("kanban"));
+    el.exportCsvBtn.addEventListener("click", exportCsv);
+    el.importCsvBtn.addEventListener("click", () => el.csvFileInput.click());
+    el.csvFileInput.addEventListener("change", () => {
+      const file = el.csvFileInput.files && el.csvFileInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        importCsvText(String(reader.result || ""));
+        el.csvFileInput.value = "";
+      };
+      reader.readAsText(file, "utf-8");
+    });
+
+    wireTaskActions(el.taskList);
+    wireTaskActions(el.kanbanContainer);
+    wireKanbanDnD();
+
+    el.resetDemo.addEventListener("click", () => {
+      const ok = confirm("Opravdu chceš smazat všechny úkoly?");
+      if (!ok) return;
+      tasks = [];
+      saveTasks();
+      render();
+    });
+
+    setView("list");
+    render();
+  </script>
+</body>
+</html>
