@@ -63,6 +63,11 @@
       font-weight: 700;
       margin: 8px 0 0;
     }
+    .stat-sub {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
 
     input, select, button {
       background: var(--panel-2);
@@ -84,7 +89,7 @@
 
     .toolbar {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr auto auto auto;
+      grid-template-columns: 1fr 1fr 1fr auto auto auto auto auto;
       gap: 10px;
       margin-bottom: 12px;
     }
@@ -230,6 +235,14 @@
       <div class="card"><div class="muted">Rozpracované</div><div class="stat-value" id="statDoing">0</div></div>
       <div class="card"><div class="muted">Dokončené</div><div class="stat-value" id="statDone">0</div></div>
       <div class="card"><div class="muted">Po termínu</div><div class="stat-value" id="statOverdue">0</div></div>
+      <div class="card"><div class="muted">Dokončeno dnes</div><div class="stat-value" id="statDoneToday">0</div></div>
+      <div class="card"><div class="muted">Vysoká priorita (open)</div><div class="stat-value" id="statHighOpen">0</div></div>
+      <div class="card"><div class="muted">Do 7 dnů</div><div class="stat-value" id="statDueSoon">0</div></div>
+      <div class="card">
+        <div class="muted">Úspěšnost</div>
+        <div class="stat-value" id="statCompletion">0%</div>
+        <div class="stat-sub">Dokončené / všechny úkoly</div>
+      </div>
     </div>
 
     <div class="card">
@@ -255,6 +268,8 @@
         </select>
         <button id="exportCsvBtn">Export CSV</button>
         <button id="importCsvBtn">Import CSV</button>
+        <button id="copyReportBtn">Kopírovat report</button>
+        <button id="emailReportBtn">Poslat e-mailem</button>
       </div>
       <input id="csvFileInput" type="file" accept=".csv,text/csv" class="hidden" />
 
@@ -316,6 +331,10 @@
       statDoing: document.getElementById("statDoing"),
       statDone: document.getElementById("statDone"),
       statOverdue: document.getElementById("statOverdue"),
+      statDoneToday: document.getElementById("statDoneToday"),
+      statHighOpen: document.getElementById("statHighOpen"),
+      statDueSoon: document.getElementById("statDueSoon"),
+      statCompletion: document.getElementById("statCompletion"),
       taskList: document.getElementById("taskList"),
       colTodo: document.getElementById("colTodo"),
       colDoing: document.getElementById("colDoing"),
@@ -339,6 +358,8 @@
       kanbanContainer: document.getElementById("kanbanContainer"),
       exportCsvBtn: document.getElementById("exportCsvBtn"),
       importCsvBtn: document.getElementById("importCsvBtn"),
+      copyReportBtn: document.getElementById("copyReportBtn"),
+      emailReportBtn: document.getElementById("emailReportBtn"),
       csvFileInput: document.getElementById("csvFileInput")
     };
 
@@ -379,13 +400,15 @@
     }
 
     function createTask(title, priority, status, dueDate) {
+      const normalizedStatus = normalizeStatus(status);
       return {
         id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
         title: title.trim(),
         priority: normalizePriority(priority),
-        status: normalizeStatus(status),
+        status: normalizedStatus,
         dueDate: normalizeDate(dueDate),
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        completedAt: normalizedStatus === "done" ? Date.now() : null
       };
     }
 
@@ -459,15 +482,40 @@
       const doing = tasks.filter((t) => t.status === "doing").length;
       const done = tasks.filter((t) => t.status === "done").length;
       const overdue = tasks.filter(isOverdue).length;
+      const highOpen = tasks.filter((t) => t.priority === "high" && t.status !== "done").length;
+      const dueSoon = tasks.filter(isDueSoon).length;
+      const doneToday = tasks.filter(isCompletedToday).length;
+      const completion = total ? Math.round((done / total) * 100) : 0;
 
       el.statTotal.textContent = total;
       el.statTodo.textContent = todo;
       el.statDoing.textContent = doing;
       el.statDone.textContent = done;
       el.statOverdue.textContent = overdue;
+      el.statHighOpen.textContent = highOpen;
+      el.statDueSoon.textContent = dueSoon;
+      el.statDoneToday.textContent = doneToday;
+      el.statCompletion.textContent = completion + "%";
       el.todoCount.textContent = todo;
       el.doingCount.textContent = doing;
       el.doneCount.textContent = done;
+    }
+
+    function isDueSoon(task) {
+      if (!task.dueDate || task.status === "done") return false;
+      const now = new Date();
+      const due = new Date(task.dueDate + "T23:59:59");
+      const diff = due.getTime() - now.getTime();
+      return diff >= 0 && diff <= 7 * 24 * 60 * 60 * 1000;
+    }
+
+    function isCompletedToday(task) {
+      if (!task.completedAt) return false;
+      const d = new Date(task.completedAt);
+      const now = new Date();
+      return d.getFullYear() === now.getFullYear()
+        && d.getMonth() === now.getMonth()
+        && d.getDate() === now.getDate();
     }
 
     function taskCardHtml(task, draggable) {
@@ -564,9 +612,60 @@
     function setTaskStatus(taskId, status) {
       const idx = tasks.findIndex((t) => t.id === taskId);
       if (idx < 0) return;
-      tasks[idx].status = normalizeStatus(status);
+      const next = normalizeStatus(status);
+      tasks[idx].status = next;
+      tasks[idx].completedAt = next === "done" ? Date.now() : null;
       saveTasks();
       render();
+    }
+
+    function buildReportText() {
+      const total = tasks.length;
+      const todo = tasks.filter((t) => t.status === "todo").length;
+      const doing = tasks.filter((t) => t.status === "doing").length;
+      const done = tasks.filter((t) => t.status === "done").length;
+      const overdue = tasks.filter(isOverdue).length;
+      const dueSoon = tasks.filter(isDueSoon).length;
+      const highOpen = tasks.filter((t) => t.priority === "high" && t.status !== "done").length;
+      const completion = total ? Math.round((done / total) * 100) : 0;
+
+      const topOpen = filteredTasks()
+        .filter((t) => t.status !== "done")
+        .slice(0, 5)
+        .map((t, i) => `${i + 1}. ${t.title} (${priorityLabel(t.priority)}, ${statusLabel(t.status)})`);
+
+      return [
+        "Dashboard ukolu - rychly report",
+        `Datum: ${new Date().toLocaleString("cs-CZ")}`,
+        "",
+        `Celkem: ${total}`,
+        `K vyrizeni: ${todo}`,
+        `Rozpracovane: ${doing}`,
+        `Dokoncene: ${done}`,
+        `Uspesnost: ${completion}%`,
+        `Po terminu: ${overdue}`,
+        `Do 7 dnu: ${dueSoon}`,
+        `Vysoka priorita (open): ${highOpen}`,
+        "",
+        "Top otevrene ukoly:",
+        ...(topOpen.length ? topOpen : ["- Zadny otevreny ukol"])
+      ].join("\n");
+    }
+
+    async function copyReport() {
+      const text = buildReportText();
+      try {
+        await navigator.clipboard.writeText(text);
+        alert("Report zkopirovan do schranky.");
+      } catch {
+        alert("Nepodarilo se zkopirovat report. Zkus jiny prohlizec.");
+      }
+    }
+
+    function emailReport() {
+      const subject = encodeURIComponent("Report ukolu");
+      const body = encodeURIComponent(buildReportText());
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
     }
 
     function toCsvValue(value) {
@@ -668,7 +767,9 @@
         if (action === "delete") {
           tasks.splice(idx, 1);
         } else if (action === "advance") {
-          tasks[idx].status = nextStatus(tasks[idx].status);
+          const next = nextStatus(tasks[idx].status);
+          tasks[idx].status = next;
+          tasks[idx].completedAt = next === "done" ? Date.now() : null;
         }
         saveTasks();
         render();
@@ -727,6 +828,8 @@
     el.kanbanViewBtn.addEventListener("click", () => setView("kanban"));
     el.exportCsvBtn.addEventListener("click", exportCsv);
     el.importCsvBtn.addEventListener("click", () => el.csvFileInput.click());
+    el.copyReportBtn.addEventListener("click", copyReport);
+    el.emailReportBtn.addEventListener("click", emailReport);
     el.csvFileInput.addEventListener("change", () => {
       const file = el.csvFileInput.files && el.csvFileInput.files[0];
       if (!file) return;
