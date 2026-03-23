@@ -300,8 +300,8 @@
       </div>
 
       <div class="view-switch" style="margin-top: 12px;">
-        <button id="listViewBtn" class="active" data-view="list">Seznam</button>
-        <button id="kanbanViewBtn" data-view="kanban">Kanban</button>
+        <button id="listViewBtn" data-view="list">Seznam</button>
+        <button id="kanbanViewBtn" class="active" data-view="kanban">Kanban</button>
       </div>
     </div>
 
@@ -335,7 +335,7 @@
     const CLOUD_TABLE = "task_dashboard_tasks";
 
     let tasks = loadTasks();
-    let currentView = "list";
+    let currentView = "kanban";
     let draggingTaskId = null;
     let supabaseClient = null;
     let cloudConnected = false;
@@ -1092,7 +1092,7 @@
       render();
     });
 
-    setView("list");
+    setView("kanban");
     render();
     (async () => {
       const config = getCloudConfig();
