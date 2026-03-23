@@ -232,6 +232,58 @@
       gap: 8px;
       min-width: 160px;
     }
+    .task-details {
+      grid-column: 1 / -1;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fbfefd;
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+    .task-details textarea {
+      width: 100%;
+      min-height: 80px;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-family: inherit;
+      color: var(--text);
+      background: #ffffff;
+    }
+    .attachment-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .attachment-list {
+      display: grid;
+      gap: 6px;
+    }
+    .attachment-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 6px 10px;
+    }
+    .attachment-item a {
+      color: #1759a5;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .attachment-item a:hover {
+      text-decoration: underline;
+    }
+    .small-btn {
+      padding: 6px 8px;
+      font-size: 12px;
+    }
 
     .empty {
       padding: 20px;
@@ -409,6 +461,8 @@
     let syncInProgress = false;
     let syncDebounceTimer = null;
     let syncPollTimer = null;
+    let expandedTaskIds = new Set();
+    let taskExtras = loadTaskExtras();
 
     const el = {
       statTotal: document.getElementById("statTotal"),
@@ -450,6 +504,31 @@
       cloudStatus: document.getElementById("cloudStatus"),
       csvFileInput: document.getElementById("csvFileInput")
     };
+
+    function loadTaskExtras() {
+      try {
+        const raw = localStorage.getItem("taskDashboardLocalExtrasV1");
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveTaskExtras() {
+      localStorage.setItem("taskDashboardLocalExtrasV1", JSON.stringify(taskExtras));
+    }
+
+    function getTaskExtra(taskId) {
+      if (!taskExtras[taskId]) {
+        taskExtras[taskId] = { notes: "", attachments: [] };
+      }
+      if (!Array.isArray(taskExtras[taskId].attachments)) {
+        taskExtras[taskId].attachments = [];
+      }
+      return taskExtras[taskId];
+    }
 
     function loadTasks() {
       try {
@@ -630,6 +709,15 @@
 
     function taskCardHtml(task, draggable) {
       const overdue = isOverdue(task);
+      const detailsOpen = expandedTaskIds.has(task.id);
+      const extra = getTaskExtra(task.id);
+      const notes = escapeHtml(extra.notes || "");
+      const attachments = (extra.attachments || []).map((item, index) => `
+        <div class="attachment-item">
+          <a href="${item.dataUrl}" download="${escapeHtml(item.name)}">${escapeHtml(item.name)}</a>
+          <button class="small-btn" data-action="remove-attachment" data-id="${task.id}" data-idx="${index}">Smazat</button>
+        </div>
+      `).join("");
       return `
         <div class="task-item" ${draggable ? 'draggable="true"' : ""} data-task-id="${task.id}">
           <div class="task-main">
@@ -644,8 +732,20 @@
           </div>
           <div class="task-actions">
             <button data-action="advance" data-id="${task.id}">Posunout stav</button>
+            <button data-action="toggle-details" data-id="${task.id}">${detailsOpen ? "Skrýt detail" : "Poznámky a přílohy"}</button>
             <button data-action="delete" data-id="${task.id}" style="color: #fecaca;">Smazat</button>
           </div>
+          ${detailsOpen ? `
+          <div class="task-details">
+            <textarea data-notes-for="${task.id}" placeholder="Poznámka k úkolu...">${notes}</textarea>
+            <div class="attachment-row">
+              <button class="small-btn" data-action="save-notes" data-id="${task.id}">Uložit poznámku</button>
+              <input type="file" data-action="add-attachment" data-id="${task.id}" multiple />
+            </div>
+            <div class="attachment-list">
+              ${attachments || '<div class="muted">Žádné přílohy</div>'}
+            </div>
+          </div>` : ""}
         </div>
       `;
     }
@@ -1041,6 +1141,15 @@
       alert(`Import hotový: ${imported.length} úkolů.`);
     }
 
+    async function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Nepodarilo se nacist soubor."));
+        reader.readAsDataURL(file);
+      });
+    }
+
     function wireTaskActions(container) {
       container.addEventListener("click", (e) => {
         const btn = e.target.closest("button");
@@ -1051,15 +1160,72 @@
         if (idx < 0) return;
 
         if (action === "delete") {
+          delete taskExtras[id];
+          saveTaskExtras();
           tasks.splice(idx, 1);
         } else if (action === "advance") {
           const next = nextStatus(tasks[idx].status);
           tasks[idx].status = next;
           tasks[idx].completedAt = next === "done" ? Date.now() : null;
           tasks[idx].updatedAt = Date.now();
+        } else if (action === "toggle-details") {
+          if (expandedTaskIds.has(id)) expandedTaskIds.delete(id);
+          else expandedTaskIds.add(id);
+          render();
+          return;
+        } else if (action === "save-notes") {
+          const textarea = container.querySelector(`textarea[data-notes-for="${id}"]`);
+          const extra = getTaskExtra(id);
+          extra.notes = textarea ? textarea.value.trim() : "";
+          saveTaskExtras();
+          alert("Poznámka uložena.");
+          render();
+          return;
+        } else if (action === "remove-attachment") {
+          const attIdx = Number(btn.dataset.idx);
+          const extra = getTaskExtra(id);
+          if (Number.isFinite(attIdx) && attIdx >= 0 && attIdx < extra.attachments.length) {
+            extra.attachments.splice(attIdx, 1);
+            saveTaskExtras();
+            render();
+          }
+          return;
         }
         markDirtyAndSave();
         render();
+      });
+
+      container.addEventListener("change", async (e) => {
+        const input = e.target.closest('input[type="file"][data-action="add-attachment"]');
+        if (!input) return;
+        const id = input.dataset.id;
+        if (!id) return;
+        const files = Array.from(input.files || []);
+        if (!files.length) return;
+        const extra = getTaskExtra(id);
+
+        try {
+          for (const file of files) {
+            if (file.size > 2 * 1024 * 1024) {
+              alert(`Soubor ${file.name} je příliš velký. Limit je 2 MB.`);
+              continue;
+            }
+            const dataUrl = await readFileAsDataUrl(file);
+            extra.attachments.push({
+              name: file.name,
+              type: file.type || "application/octet-stream",
+              size: file.size,
+              dataUrl,
+              addedAt: Date.now()
+            });
+          }
+          saveTaskExtras();
+          render();
+        } catch {
+          alert("Nepodařilo se nahrát přílohu.");
+        } finally {
+          input.value = "";
+        }
       });
     }
 
@@ -1154,6 +1320,9 @@
       const ok = confirm("Opravdu chceš smazat všechny úkoly?");
       if (!ok) return;
       tasks = [];
+      taskExtras = {};
+      expandedTaskIds.clear();
+      saveTaskExtras();
       markDirtyAndSave();
       render();
     });
