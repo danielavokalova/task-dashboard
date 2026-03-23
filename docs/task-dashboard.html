@@ -120,16 +120,27 @@
 
     .toolbar {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto auto auto auto auto auto auto;
+      grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
       gap: 10px;
       margin-bottom: 12px;
+    }
+    .utility-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 10px;
     }
     .cloud-status {
       font-size: 12px;
       color: var(--muted);
       display: inline-flex;
       align-items: center;
-      padding: 0 4px;
+      padding: 0 6px;
+      min-height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f7fcfa;
     }
 
     .view-switch {
@@ -414,6 +425,7 @@
       .task-item { grid-template-columns: 1fr; }
       .task-actions { min-width: 0; }
       .kanban-board { grid-template-columns: 1fr; }
+      .utility-actions { justify-content: flex-start; }
     }
   </style>
 </head>
@@ -485,13 +497,6 @@
           <option value="newest">Nejnovější</option>
           <option value="oldest">Nejstarší</option>
         </select>
-        <button id="exportCsvBtn">Export CSV</button>
-        <button id="importCsvBtn">Import CSV</button>
-        <button id="copyReportBtn">Kopírovat report</button>
-        <button id="emailReportBtn">Poslat e-mailem</button>
-        <button id="connectCloudBtn">Cloud připojení</button>
-        <button id="syncNowBtn">Sync teď</button>
-        <div id="cloudStatus" class="cloud-status">Cloud: lokální režim</div>
       </div>
       <input id="csvFileInput" type="file" accept=".csv,text/csv" class="hidden" />
 
@@ -528,6 +533,15 @@
         </select>
         <input id="newDueDate" type="date" />
         <button id="addTaskBtn" class="btn-primary">Přidat úkol</button>
+      </div>
+      <div class="utility-actions">
+        <button id="exportCsvBtn">Export CSV</button>
+        <button id="importCsvBtn">Import CSV</button>
+        <button id="copyReportBtn">Kopírovat report</button>
+        <button id="emailReportBtn">Poslat e-mailem</button>
+        <button id="connectCloudBtn">Cloud připojení</button>
+        <button id="syncNowBtn">Sync teď</button>
+        <div id="cloudStatus" class="cloud-status">Cloud: lokální režim</div>
       </div>
 
       <div class="view-switch" style="margin-top: 12px;">
@@ -1643,6 +1657,25 @@
     wireTaskActions(el.taskList);
     wireTaskActions(el.kanbanContainer);
     wireKanbanDnD();
+    el.quickMenu.addEventListener("click", (e) => {
+      const trigger = e.target.closest("[data-action]");
+      if (!trigger) return;
+      const action = trigger.dataset.action;
+      const id = trigger.dataset.id;
+      if (!id) return;
+      if (action === "quick-select") {
+        applyQuickSelection(id, trigger.dataset.field, trigger.dataset.value);
+      } else if (action === "quick-save-date") {
+        const input = el.quickMenu.querySelector(`[data-quick-date-input="${id}"]`);
+        const raw = input ? input.value.trim() : "";
+        const normalized = normalizeDate(raw);
+        if (raw && !normalized) {
+          alert("Neplatný formát data. Použij YYYY-MM-DD.");
+          return;
+        }
+        applyQuickSelection(id, "dueDate", raw ? raw : "bez termínu");
+      }
+    });
     document.addEventListener("click", (e) => {
       if (el.quickMenu.classList.contains("hidden")) return;
       if (e.target.closest("#quickMenu")) return;
