@@ -9,20 +9,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #c5d4ce;
-      --bg-soft: #b8c9c2;
+      --bg: #c4d9b4;
+      --bg-soft: #d2e4c4;
       --panel: #ffffff;
-      --panel-2: #eef6f2;
+      --panel-2: #f2faf0;
       --text: #0f2a21;
-      --muted: #4a635c;
+      --muted: #4a6350;
       --accent: #11a868;
       --accent-2: #0e8a56;
       --todo: #226fdf;
       --doing: #d9821a;
       --done: #10a468;
-      --border: #a8bdb4;
-      --shadow: 0 18px 40px rgba(12, 48, 38, 0.18);
-      --tile-shadow: 0 14px 32px rgba(8, 42, 32, 0.16);
+      --border: #b0c99e;
+      --shadow: 0 18px 44px rgba(45, 72, 38, 0.2);
+      --tile-shadow: 0 12px 28px rgba(38, 62, 32, 0.14);
       --btn-secondary-bg: #e3f0ff;
       --btn-secondary-border: #9ec8ea;
       --btn-secondary-text: #1a5080;
@@ -33,9 +33,10 @@
       margin: 0;
       font-family: "Manrope", "Segoe UI", Arial, sans-serif;
       background:
-        radial-gradient(ellipse 90% 70% at 0% 0%, #a8c9bf 0%, transparent 55%),
-        radial-gradient(ellipse 80% 60% at 100% 15%, #9bb8d4 0%, transparent 50%),
-        linear-gradient(165deg, #9aafaa 0%, #b0c4bc 38%, #a3b5b0 100%);
+        radial-gradient(ellipse 85% 65% at 12% 8%, #d8ecc8 0%, transparent 58%),
+        radial-gradient(ellipse 70% 55% at 92% 18%, #c9e0b0 0%, transparent 52%),
+        radial-gradient(ellipse 60% 45% at 50% 100%, #b9d4a0 0%, transparent 45%),
+        linear-gradient(168deg, #b6cf9e 0%, #c8ddb8 42%, #bdd2a8 100%);
       color: var(--text);
       min-height: 100vh;
     }
@@ -44,32 +45,50 @@
       width: 100%;
       max-width: none;
       margin: 0 auto;
-      padding: 20px clamp(16px, 3vw, 40px);
+      padding: 22px clamp(16px, 3vw, 40px) 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    /* Velké „dlaždice“ – sekce vystupují od teplého listového pozadí */
+    .dash-tile {
+      background: linear-gradient(168deg, #ffffff 0%, #f7fbf4 55%, #f2f8ed 100%);
+      border: 1px solid rgba(255, 255, 255, 0.92);
+      border-radius: 18px;
+      box-shadow:
+        0 16px 40px rgba(38, 62, 32, 0.17),
+        0 1px 0 rgba(255, 255, 255, 0.85) inset;
     }
 
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 18px;
+      margin-bottom: 0;
       gap: 12px;
       flex-wrap: wrap;
-      background: linear-gradient(120deg, #ffffff, #eef9f3 70%);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 18px;
-      box-shadow: var(--shadow);
+      padding: 20px 22px;
     }
 
-    h1 { margin: 0; font-size: 28px; }
+    h1 {
+      margin: 0;
+      font-size: clamp(22px, 2.4vw, 30px);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #0d2419;
+    }
     .muted { color: var(--muted); }
     .grid { display: grid; gap: 16px; }
 
     .stats {
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      margin-bottom: 16px;
+      margin-bottom: 0;
+      padding: 18px;
+      gap: 14px;
     }
-    .stats-panel { margin-bottom: 16px; }
+    .stats-panel { margin-bottom: 0; }
     .stats-panel-header {
       display: flex;
       justify-content: space-between;
@@ -120,11 +139,23 @@
     }
 
     .card {
-      background: linear-gradient(180deg, #ffffff 0%, #f5fcf9 100%);
-      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #ffffff 0%, #f6fbf3 100%);
+      border: 1px solid rgba(176, 201, 158, 0.65);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: var(--tile-shadow);
+    }
+    .stats .card {
       border-radius: 12px;
-      padding: 16px;
-      box-shadow: var(--shadow);
+      box-shadow: 0 8px 20px rgba(38, 62, 32, 0.1);
+    }
+
+    .card.dash-tile {
+      box-shadow:
+        0 16px 40px rgba(38, 62, 32, 0.17),
+        0 1px 0 rgba(255, 255, 255, 0.85) inset;
+      border: 1px solid rgba(255, 255, 255, 0.92);
+      border-radius: 18px;
     }
 
     .stat-value {
@@ -220,15 +251,15 @@
     }
 
     .task-item {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: linear-gradient(180deg, #ffffff 0%, #f4fbf7 100%);
-      padding: 12px;
+      border: 1px solid rgba(176, 201, 158, 0.85);
+      border-radius: 12px;
+      background: linear-gradient(180deg, #ffffff 0%, #f5faf2 100%);
+      padding: 14px;
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 10px;
       align-items: start;
-      box-shadow: var(--tile-shadow);
+      box-shadow: 0 8px 22px rgba(38, 62, 32, 0.11);
     }
 
     .task-item[draggable="true"] { cursor: grab; }
@@ -433,23 +464,25 @@
     }
 
     .kanban-col {
-      background: linear-gradient(180deg, #f6fcf9 0%, #edf8f3 100%);
-      border: 1px solid #cfe5dc;
-      border-radius: 10px;
+      background: linear-gradient(180deg, #ffffff 0%, #f4faf0 100%);
+      border: 1px solid rgba(176, 201, 158, 0.75);
+      border-radius: 14px;
       min-height: 350px;
       display: grid;
       grid-template-rows: auto 1fr;
-      box-shadow: 0 10px 22px rgba(13, 78, 52, 0.1);
+      box-shadow: 0 12px 28px rgba(38, 62, 32, 0.14);
     }
 
     .kanban-head {
-      padding: 12px;
-      border-bottom: 1px solid var(--border);
+      padding: 14px 14px;
+      border-bottom: 1px solid rgba(176, 201, 158, 0.55);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-weight: 600;
-      background: linear-gradient(180deg, #ffffff, #f2faf6);
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+      background: linear-gradient(180deg, #ffffff, #eef6e8);
     }
 
     .kanban-dropzone {
@@ -487,10 +520,10 @@
     .modal-dialog {
       width: min(96vw, 1100px);
       max-height: min(92vh, 900px);
-      background: linear-gradient(180deg, #ffffff 0%, #f6fcfa 100%);
-      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #ffffff 0%, #f5faf2 100%);
+      border: 1px solid rgba(176, 201, 158, 0.8);
       border-radius: 16px;
-      box-shadow: 0 28px 64px rgba(8, 42, 32, 0.28);
+      box-shadow: 0 28px 64px rgba(38, 62, 32, 0.26);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -532,18 +565,22 @@
       min-height: min(52vh, 420px);
       flex: 1;
       resize: vertical;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 16px;
+      border: 1px solid rgba(176, 201, 158, 0.9);
+      border-radius: 12px;
+      padding: 16px 18px;
       font-family: inherit;
-      font-size: 15px;
-      line-height: 1.5;
-      color: var(--text);
-      background: #ffffff;
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.65;
+      letter-spacing: 0.015em;
+      color: #0a1f14;
+      background: #fbfff8;
+      -webkit-font-smoothing: antialiased;
     }
     .modal-body textarea.modal-notes:focus {
-      outline: 2px solid rgba(17, 168, 104, 0.35);
+      outline: 2px solid rgba(17, 168, 104, 0.45);
       outline-offset: 2px;
+      background: #ffffff;
     }
     .modal-footer {
       display: flex;
@@ -614,7 +651,7 @@
 </head>
 <body>
   <div class="container">
-    <div class="header">
+    <div class="header dash-tile">
       <div>
         <h1>Dashboard úkolů</h1>
         <div class="muted">Moderní přehled práce: jednoduše, chytře, rychle.</div>
@@ -622,7 +659,7 @@
       <button id="resetDemo" title="Smaže všechny úkoly">Vymazat vše</button>
     </div>
 
-    <div class="grid stats">
+    <div class="grid stats dash-tile">
       <div class="card"><div class="muted">Celkem</div><div class="stat-value" id="statTotal">0</div></div>
       <div class="card"><div class="muted">K vyřízení</div><div class="stat-value" id="statTodo">0</div></div>
       <div class="card"><div class="muted">Rozpracované</div><div class="stat-value" id="statDoing">0</div></div>
@@ -637,7 +674,7 @@
         <div class="stat-sub">Dokončené / všechny úkoly</div>
       </div>
     </div>
-    <div class="card stats-panel">
+    <div class="card stats-panel dash-tile">
       <div class="stats-panel-header">
         <div class="muted">Přehled podle produktu a typu požadavku</div>
         <div class="stats-panel-actions">
@@ -662,7 +699,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card dash-tile">
       <div class="toolbar">
         <input id="searchInput" type="text" placeholder="Hledat podle názvu..." />
         <select id="filterStatus">
@@ -759,11 +796,11 @@
       </div>
     </div>
 
-    <div id="listContainer" class="card" style="margin-top: 16px;">
+    <div id="listContainer" class="card dash-tile">
       <div class="task-list" id="taskList"></div>
     </div>
 
-    <div id="kanbanContainer" class="card hidden" style="margin-top: 16px;">
+    <div id="kanbanContainer" class="card dash-tile hidden">
       <div class="kanban-board">
         <div class="kanban-col">
           <div class="kanban-head"><span>K vyřízení</span><span id="todoCount">0</span></div>
