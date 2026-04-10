@@ -62,13 +62,38 @@
     }
 
     .header {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       align-items: center;
       margin-bottom: 0;
-      gap: 12px;
-      flex-wrap: wrap;
+      gap: 16px 20px;
       padding: 20px 22px;
+    }
+    .header-brand { min-width: 0; }
+    .header-clock {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      padding: 12px 18px;
+      background: rgba(255, 255, 255, 0.72);
+      border-radius: 14px;
+      border: 1px solid rgba(176, 201, 158, 0.65);
+      box-shadow: 0 6px 18px rgba(38, 62, 32, 0.1);
+      line-height: 1.35;
+    }
+    .header-clock .cw-date {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: capitalize;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .header-clock .cw-time {
+      display: block;
+      font-size: 18px;
+      font-weight: 800;
+      color: #0d2419;
+      letter-spacing: 0.02em;
     }
 
     h1 {
@@ -457,32 +482,53 @@
       color: var(--muted);
     }
 
+    /* Kanban přímo na zeleném pozadí — každý sloupec je samostatná dlaždice */
+    .kanban-stage {
+      padding: 6px 0 10px;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
     .kanban-board {
       display: grid;
-      grid-template-columns: repeat(3, minmax(min(100%, 300px), 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(3, minmax(min(100%, 280px), 1fr));
+      gap: clamp(18px, 2.5vw, 28px);
     }
 
     .kanban-col {
-      background: linear-gradient(180deg, #ffffff 0%, #f4faf0 100%);
-      border: 1px solid rgba(176, 201, 158, 0.75);
-      border-radius: 14px;
+      background: linear-gradient(175deg, #ffffff 0%, #f6faf3 45%, #eef6e8 100%);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      border-radius: 18px;
       min-height: 350px;
       display: grid;
       grid-template-rows: auto 1fr;
-      box-shadow: 0 12px 28px rgba(38, 62, 32, 0.14);
+      box-shadow:
+        0 22px 50px rgba(38, 62, 32, 0.22),
+        0 0 0 1px rgba(176, 201, 158, 0.25) inset;
+      overflow: hidden;
+    }
+    .kanban-col-todo {
+      border-top: 4px solid #4a8fd4;
+    }
+    .kanban-col-doing {
+      border-top: 4px solid #e0982a;
+    }
+    .kanban-col.kanban-col-done {
+      border-top: 4px solid #2d9d6c;
+      grid-template-rows: auto auto 1fr;
     }
 
     .kanban-head {
-      padding: 14px 14px;
-      border-bottom: 1px solid rgba(176, 201, 158, 0.55);
+      padding: 16px 16px;
+      border-bottom: 1px solid rgba(176, 201, 158, 0.5);
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-weight: 700;
       font-size: 14px;
       letter-spacing: 0.02em;
-      background: linear-gradient(180deg, #ffffff, #eef6e8);
+      background: linear-gradient(180deg, #ffffff, #f0f7ec);
     }
 
     .kanban-dropzone {
@@ -693,15 +739,24 @@
       .task-actions { min-width: 0; }
       .kanban-board { grid-template-columns: 1fr; }
       .utility-actions { justify-content: flex-start; }
+      .header {
+        grid-template-columns: 1fr;
+        justify-items: stretch;
+      }
+      .header-clock { text-align: left; }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header dash-tile">
-      <div>
+      <div class="header-brand">
         <h1>Dashboard úkolů</h1>
         <div class="muted">Moderní přehled práce: jednoduše, chytře, rychle.</div>
+      </div>
+      <div class="header-clock" id="clockWidget" aria-live="polite" title="Aktuální datum a čas">
+        <span class="cw-date" id="clockDate"></span>
+        <span class="cw-time" id="clockTime"></span>
       </div>
       <button id="resetDemo" title="Smaže všechny úkoly">Vymazat vše</button>
     </div>
@@ -853,13 +908,13 @@
       <div class="task-list" id="taskList"></div>
     </div>
 
-    <div id="kanbanContainer" class="card dash-tile hidden">
+    <div id="kanbanContainer" class="kanban-stage hidden">
       <div class="kanban-board">
-        <div class="kanban-col">
+        <div class="kanban-col kanban-col-todo">
           <div class="kanban-head"><span>K vyřízení</span><span id="todoCount">0</span></div>
           <div class="kanban-dropzone" data-status="todo" id="colTodo"></div>
         </div>
-        <div class="kanban-col">
+        <div class="kanban-col kanban-col-doing">
           <div class="kanban-head"><span>Rozpracované</span><span id="doingCount">0</span></div>
           <div class="kanban-dropzone" data-status="doing" id="colDoing"></div>
         </div>
@@ -2207,6 +2262,26 @@
         });
       });
     }
+
+    function updateHeaderClock() {
+      const dateEl = document.getElementById("clockDate");
+      const timeEl = document.getElementById("clockTime");
+      if (!dateEl || !timeEl) return;
+      const now = new Date();
+      dateEl.textContent = now.toLocaleDateString("cs-CZ", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+      timeEl.textContent = now.toLocaleTimeString("cs-CZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+    }
+    updateHeaderClock();
+    setInterval(updateHeaderClock, 1000);
 
     el.addTaskBtn.addEventListener("click", addTask);
     el.newTitle.addEventListener("keydown", (e) => {
