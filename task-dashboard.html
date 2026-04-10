@@ -9,23 +9,23 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f5f9f7;
-      --bg-soft: #ecf6f1;
+      --bg: #c5d4ce;
+      --bg-soft: #b8c9c2;
       --panel: #ffffff;
-      --panel-2: #eef8f3;
+      --panel-2: #eef6f2;
       --text: #0f2a21;
-      --muted: #5f7a71;
+      --muted: #4a635c;
       --accent: #11a868;
       --accent-2: #0e8a56;
       --todo: #226fdf;
       --doing: #d9821a;
       --done: #10a468;
-      --border: #d9e9e1;
-      --shadow: 0 16px 34px rgba(16, 84, 58, 0.12);
-      --tile-shadow: 0 14px 28px rgba(8, 58, 38, 0.14);
-      --btn-secondary-bg: #eaf6ff;
-      --btn-secondary-border: #b9daf5;
-      --btn-secondary-text: #1f5d96;
+      --border: #a8bdb4;
+      --shadow: 0 18px 40px rgba(12, 48, 38, 0.18);
+      --tile-shadow: 0 14px 32px rgba(8, 42, 32, 0.16);
+      --btn-secondary-bg: #e3f0ff;
+      --btn-secondary-border: #9ec8ea;
+      --btn-secondary-text: #1a5080;
     }
 
     * { box-sizing: border-box; }
@@ -33,17 +33,18 @@
       margin: 0;
       font-family: "Manrope", "Segoe UI", Arial, sans-serif;
       background:
-        radial-gradient(circle at 5% 5%, #d9f4e8 0, transparent 28%),
-        radial-gradient(circle at 95% 10%, #d8eef8 0, transparent 30%),
-        linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
+        radial-gradient(ellipse 90% 70% at 0% 0%, #a8c9bf 0%, transparent 55%),
+        radial-gradient(ellipse 80% 60% at 100% 15%, #9bb8d4 0%, transparent 50%),
+        linear-gradient(165deg, #9aafaa 0%, #b0c4bc 38%, #a3b5b0 100%);
       color: var(--text);
       min-height: 100vh;
     }
 
     .container {
-      max-width: 1200px;
+      width: 100%;
+      max-width: none;
       margin: 0 auto;
-      padding: 24px;
+      padding: 20px clamp(16px, 3vw, 40px);
     }
 
     .header {
@@ -213,7 +214,7 @@
     .task-list {
       display: grid;
       gap: 10px;
-      max-height: 58vh;
+      max-height: min(74vh, 920px);
       overflow: auto;
       padding-right: 4px;
     }
@@ -427,8 +428,8 @@
 
     .kanban-board {
       display: grid;
-      grid-template-columns: repeat(3, minmax(240px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(3, minmax(min(100%, 300px), 1fr));
+      gap: 14px;
     }
 
     .kanban-col {
@@ -456,7 +457,10 @@
       display: grid;
       gap: 10px;
       align-content: start;
-      min-height: 280px;
+      min-height: min(42vh, 380px);
+    }
+    .kanban-dropzone[data-status="done"] {
+      min-height: min(36vh, 320px);
     }
 
     .kanban-dropzone.drag-over {
@@ -466,6 +470,135 @@
     }
 
     .hidden { display: none; }
+
+    /* Modal: poznámky a přílohy */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(15, 38, 32, 0.45);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(12px, 3vw, 28px);
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal-dialog {
+      width: min(96vw, 1100px);
+      max-height: min(92vh, 900px);
+      background: linear-gradient(180deg, #ffffff 0%, #f6fcfa 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 28px 64px rgba(8, 42, 32, 0.28);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(120deg, #ffffff, #eef8f3);
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: clamp(17px, 2vw, 20px);
+      line-height: 1.35;
+      flex: 1;
+    }
+    .modal-hint {
+      margin: 0;
+      padding: 8px 18px;
+      font-size: 12px;
+      color: var(--muted);
+      background: #f0faf6;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-body {
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: auto;
+      flex: 1;
+      min-height: 0;
+    }
+    .modal-body textarea.modal-notes {
+      width: 100%;
+      min-height: min(52vh, 420px);
+      flex: 1;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-family: inherit;
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--text);
+      background: #ffffff;
+    }
+    .modal-body textarea.modal-notes:focus {
+      outline: 2px solid rgba(17, 168, 104, 0.35);
+      outline-offset: 2px;
+    }
+    .modal-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+      background: #f8fcfa;
+    }
+    .modal-footer .spacer { flex: 1; min-width: 8px; }
+
+    /* Sloupec Dokončené (CLOSED): sbalení + hledání */
+    .kanban-col-done .closed-search-wrap {
+      padding: 0 10px 8px;
+    }
+    .closed-search-input {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 13px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      font-family: inherit;
+    }
+    .kanban-col-done.collapsed .closed-search-wrap,
+    .kanban-col-done.collapsed .done-cards-stack {
+      display: none;
+    }
+    .done-compact-hint {
+      display: none;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      padding: 10px 8px;
+      border: 1px dashed #9bc4b0;
+      border-radius: 8px;
+      margin: 0 10px 10px;
+      background: rgba(255, 255, 255, 0.65);
+    }
+    .kanban-col-done.collapsed .done-compact-hint {
+      display: block;
+    }
+    .kanban-head-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-icon {
+      padding: 6px 10px;
+      font-size: 12px;
+      min-width: auto;
+    }
 
     @media (max-width: 980px) {
       .toolbar { grid-template-columns: 1fr 1fr; }
@@ -640,14 +773,50 @@
           <div class="kanban-head"><span>Rozpracované</span><span id="doingCount">0</span></div>
           <div class="kanban-dropzone" data-status="doing" id="colDoing"></div>
         </div>
-        <div class="kanban-col">
-          <div class="kanban-head"><span>Dokončené</span><span id="doneCount">0</span></div>
-          <div class="kanban-dropzone" data-status="done" id="colDone"></div>
+        <div class="kanban-col kanban-col-done collapsed" id="kanbanColDone">
+          <div class="kanban-head">
+            <span>Dokončené (CLOSED)</span>
+            <span class="kanban-head-actions">
+              <span id="doneCount">0</span>
+              <button type="button" class="btn-icon" id="toggleDoneCollapseBtn" title="Rozbalit nebo sbalit dokončené úkoly">Rozbalit</button>
+            </span>
+          </div>
+          <div class="closed-search-wrap">
+            <input type="text" id="closedSearchInput" class="closed-search-input" placeholder="Hledat v dokončených podle názvu…" autocomplete="off" />
+            <div id="closedSearchMeta" class="muted" style="font-size:11px;margin-top:6px;"></div>
+          </div>
+          <div class="kanban-dropzone" data-status="done" id="colDone">
+            <div class="done-compact-hint">Přetáhni kartu sem pro dokončení · rozbal seznam pro práci s historií</div>
+            <div class="done-cards-stack" id="colDoneCards"></div>
+          </div>
         </div>
       </div>
     </div>
   </div>
   <div id="quickMenu" class="quick-menu hidden"></div>
+
+  <div id="taskDetailsModal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTaskTitle">
+      <div class="modal-header">
+        <h2 id="modalTaskTitle">Úkol</h2>
+        <button type="button" id="modalCloseBtn" class="btn-icon">Zavřít</button>
+      </div>
+      <p class="modal-hint">Úpravy textu: Ctrl+A označí vše, Ctrl+C zkopíruje (vhodné pro stand-up tabulku). Změny se uloží při Zavřít nebo Uložit.</p>
+      <div class="modal-body">
+        <textarea id="modalNotes" class="modal-notes" placeholder="Poznámky k úkolu…"></textarea>
+        <div class="attachment-row">
+          <input type="file" id="modalAttachmentInput" multiple />
+        </div>
+        <div class="attachment-list" id="modalAttachmentList"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-primary small-btn" id="modalSaveNotesBtn">Uložit poznámku</button>
+        <button type="button" class="small-btn" id="modalSelectAllBtn">Označit vše (Ctrl+A)</button>
+        <div class="spacer"></div>
+        <button type="button" class="small-btn" id="modalCopyNotesBtn">Kopírovat text</button>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -666,7 +835,15 @@
     let syncInProgress = false;
     let syncDebounceTimer = null;
     let syncPollTimer = null;
-    let expandedTaskIds = new Set();
+    const DONE_COLLAPSED_KEY = "taskDashboardDoneCollapsedV1";
+    let detailsModalTaskId = null;
+    let doneColumnCollapsed = (() => {
+      try {
+        const s = localStorage.getItem(DONE_COLLAPSED_KEY);
+        if (s === "false") return false;
+      } catch { /* ignore */ }
+      return true;
+    })();
     let editingTaskIds = new Set();
     let taskExtras = loadTaskExtras();
     let breakdownExpanded = false;
@@ -693,6 +870,20 @@
       colTodo: document.getElementById("colTodo"),
       colDoing: document.getElementById("colDoing"),
       colDone: document.getElementById("colDone"),
+      colDoneCards: document.getElementById("colDoneCards"),
+      kanbanColDone: document.getElementById("kanbanColDone"),
+      toggleDoneCollapseBtn: document.getElementById("toggleDoneCollapseBtn"),
+      closedSearchInput: document.getElementById("closedSearchInput"),
+      closedSearchMeta: document.getElementById("closedSearchMeta"),
+      taskDetailsModal: document.getElementById("taskDetailsModal"),
+      modalTaskTitle: document.getElementById("modalTaskTitle"),
+      modalCloseBtn: document.getElementById("modalCloseBtn"),
+      modalNotes: document.getElementById("modalNotes"),
+      modalAttachmentInput: document.getElementById("modalAttachmentInput"),
+      modalAttachmentList: document.getElementById("modalAttachmentList"),
+      modalSaveNotesBtn: document.getElementById("modalSaveNotesBtn"),
+      modalSelectAllBtn: document.getElementById("modalSelectAllBtn"),
+      modalCopyNotesBtn: document.getElementById("modalCopyNotesBtn"),
       todoCount: document.getElementById("todoCount"),
       doingCount: document.getElementById("doingCount"),
       doneCount: document.getElementById("doneCount"),
@@ -1101,16 +1292,7 @@
 
     function taskCardHtml(task, draggable) {
       const overdue = isOverdue(task);
-      const detailsOpen = expandedTaskIds.has(task.id);
       const editOpen = editingTaskIds.has(task.id);
-      const extra = getTaskExtra(task.id);
-      const notes = escapeHtml(extra.notes || "");
-      const attachments = (extra.attachments || []).map((item, index) => `
-        <div class="attachment-item">
-          <a href="${item.dataUrl}" download="${escapeHtml(item.name)}">${escapeHtml(item.name)}</a>
-          <button class="small-btn" data-action="remove-attachment" data-id="${task.id}" data-idx="${index}">Smazat</button>
-        </div>
-      `).join("");
       return `
         <div class="task-item" ${draggable ? 'draggable="true"' : ""} data-task-id="${task.id}">
           <div class="task-main">
@@ -1128,7 +1310,7 @@
           <div class="task-actions">
             <button data-action="advance" data-id="${task.id}">Posunout stav</button>
             <button data-action="toggle-edit" data-id="${task.id}">${editOpen ? "Zavřít editaci" : "Upravit"}</button>
-            <button data-action="toggle-details" data-id="${task.id}">${detailsOpen ? "Skrýt detail" : "Poznámky a přílohy"}</button>
+            <button data-action="open-details-modal" data-id="${task.id}">Poznámky a přílohy</button>
             <button data-action="delete" data-id="${task.id}" style="color: #fecaca;">Smazat</button>
           </div>
           ${editOpen ? `
@@ -1154,17 +1336,6 @@
               <button class="small-btn" data-action="cancel-edit" data-id="${task.id}">Storno</button>
             </div>
           </div>` : ""}
-          ${detailsOpen ? `
-          <div class="task-details">
-            <textarea data-notes-for="${task.id}" placeholder="Poznámka k úkolu...">${notes}</textarea>
-            <div class="attachment-row">
-              <button class="small-btn" data-action="save-notes" data-id="${task.id}">Uložit poznámku</button>
-              <input type="file" data-action="add-attachment" data-id="${task.id}" multiple />
-            </div>
-            <div class="attachment-list">
-              ${attachments || '<div class="muted">Žádné přílohy</div>'}
-            </div>
-          </div>` : ""}
         </div>
       `;
     }
@@ -1183,15 +1354,98 @@
       const byStatus = { todo: [], doing: [], done: [] };
       list.forEach((task) => byStatus[task.status].push(task));
 
+      const closedQ = el.closedSearchInput.value.trim().toLowerCase();
+      const doneBase = byStatus.done;
+      const doneShown = closedQ
+        ? doneBase.filter((t) => t.title.toLowerCase().includes(closedQ))
+        : doneBase;
+
+      if (el.closedSearchMeta) {
+        if (closedQ && doneBase.length) {
+          el.closedSearchMeta.textContent = doneShown.length
+            ? `Zobrazeno ${doneShown.length} z ${doneBase.length} dokončených`
+            : `Žádná shoda v ${doneBase.length} dokončených úkolech`;
+        } else {
+          el.closedSearchMeta.textContent = "";
+        }
+      }
+
       el.colTodo.innerHTML = byStatus.todo.length
         ? byStatus.todo.map((task) => taskCardHtml(task, true)).join("")
         : '<div class="empty">Žádné úkoly</div>';
       el.colDoing.innerHTML = byStatus.doing.length
         ? byStatus.doing.map((task) => taskCardHtml(task, true)).join("")
         : '<div class="empty">Žádné úkoly</div>';
-      el.colDone.innerHTML = byStatus.done.length
-        ? byStatus.done.map((task) => taskCardHtml(task, true)).join("")
-        : '<div class="empty">Žádné úkoly</div>';
+
+      if (!el.colDoneCards) return;
+      if (doneShown.length) {
+        el.colDoneCards.innerHTML = doneShown.map((task) => taskCardHtml(task, true)).join("");
+      } else if (doneBase.length && closedQ) {
+        el.colDoneCards.innerHTML = '<div class="empty">Žádný dokončený úkol neodpovídá hledání.</div>';
+      } else {
+        el.colDoneCards.innerHTML = '<div class="empty">Žádné úkoly</div>';
+      }
+    }
+
+    function applyDoneColumnCollapsed() {
+      if (!el.kanbanColDone || !el.toggleDoneCollapseBtn) return;
+      el.kanbanColDone.classList.toggle("collapsed", doneColumnCollapsed);
+      el.toggleDoneCollapseBtn.textContent = doneColumnCollapsed ? "Rozbalit" : "Sbalit";
+    }
+
+    function saveDoneCollapsed() {
+      try {
+        localStorage.setItem(DONE_COLLAPSED_KEY, doneColumnCollapsed ? "true" : "false");
+      } catch { /* ignore */ }
+    }
+
+    function renderModalAttachments() {
+      if (!detailsModalTaskId || !el.modalAttachmentList) return;
+      const extra = getTaskExtra(detailsModalTaskId);
+      const attachments = extra.attachments || [];
+      el.modalAttachmentList.innerHTML = attachments.length
+        ? attachments.map((item, index) => `
+          <div class="attachment-item">
+            <a href="${item.dataUrl}" download="${escapeHtml(item.name)}">${escapeHtml(item.name)}</a>
+            <button type="button" class="small-btn" data-modal-remove="${index}">Smazat</button>
+          </div>
+        `).join("")
+        : '<div class="muted">Žádné přílohy</div>';
+    }
+
+    function openTaskDetailsModal(taskId) {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+      closeQuickMenu();
+      detailsModalTaskId = taskId;
+      el.modalTaskTitle.textContent = task.title;
+      const extra = getTaskExtra(taskId);
+      el.modalNotes.value = extra.notes || "";
+      renderModalAttachments();
+      el.taskDetailsModal.classList.remove("hidden");
+      el.taskDetailsModal.setAttribute("aria-hidden", "false");
+      if (el.modalAttachmentInput) el.modalAttachmentInput.value = "";
+      setTimeout(() => {
+        try {
+          el.modalNotes.focus();
+        } catch { /* ignore */ }
+      }, 30);
+    }
+
+    function persistModalNotes() {
+      if (!detailsModalTaskId) return;
+      const extra = getTaskExtra(detailsModalTaskId);
+      extra.notes = el.modalNotes.value;
+      saveTaskExtras();
+    }
+
+    function closeTaskDetailsModal() {
+      if (detailsModalTaskId) persistModalNotes();
+      detailsModalTaskId = null;
+      el.taskDetailsModal.classList.add("hidden");
+      el.taskDetailsModal.setAttribute("aria-hidden", "true");
+      if (el.modalAttachmentInput) el.modalAttachmentInput.value = "";
+      render();
     }
 
     function setView(view) {
@@ -1206,6 +1460,7 @@
 
     function render() {
       updateStats();
+      applyDoneColumnCollapsed();
       renderList();
       renderKanban();
     }
@@ -1588,9 +1843,9 @@
         if (idx < 0) return;
 
         if (action === "delete") {
+          if (detailsModalTaskId === id) closeTaskDetailsModal();
           delete taskExtras[id];
           saveTaskExtras();
-          expandedTaskIds.delete(id);
           editingTaskIds.delete(id);
           tasks.splice(idx, 1);
         } else if (action === "advance") {
@@ -1630,27 +1885,8 @@
           markDirtyAndSave();
           render();
           return;
-        } else if (action === "toggle-details") {
-          if (expandedTaskIds.has(id)) expandedTaskIds.delete(id);
-          else expandedTaskIds.add(id);
-          render();
-          return;
-        } else if (action === "save-notes") {
-          const textarea = container.querySelector(`textarea[data-notes-for="${id}"]`);
-          const extra = getTaskExtra(id);
-          extra.notes = textarea ? textarea.value.trim() : "";
-          saveTaskExtras();
-          alert("Poznámka uložena.");
-          render();
-          return;
-        } else if (action === "remove-attachment") {
-          const attIdx = Number(trigger.dataset.idx);
-          const extra = getTaskExtra(id);
-          if (Number.isFinite(attIdx) && attIdx >= 0 && attIdx < extra.attachments.length) {
-            extra.attachments.splice(attIdx, 1);
-            saveTaskExtras();
-            render();
-          }
+        } else if (action === "open-details-modal") {
+          openTaskDetailsModal(id);
           return;
         } else if (action === "quick-status") {
           openQuickMenu(id, "status", trigger);
@@ -1685,38 +1921,6 @@
         render();
       });
 
-      container.addEventListener("change", async (e) => {
-        const input = e.target.closest('input[type="file"][data-action="add-attachment"]');
-        if (!input) return;
-        const id = input.dataset.id;
-        if (!id) return;
-        const files = Array.from(input.files || []);
-        if (!files.length) return;
-        const extra = getTaskExtra(id);
-
-        try {
-          for (const file of files) {
-            if (file.size > 2 * 1024 * 1024) {
-              alert(`Soubor ${file.name} je příliš velký. Limit je 2 MB.`);
-              continue;
-            }
-            const dataUrl = await readFileAsDataUrl(file);
-            extra.attachments.push({
-              name: file.name,
-              type: file.type || "application/octet-stream",
-              size: file.size,
-              dataUrl,
-              addedAt: Date.now()
-            });
-          }
-          saveTaskExtras();
-          render();
-        } catch {
-          alert("Nepodařilo se nahrát přílohu.");
-        } finally {
-          input.value = "";
-        }
-      });
     }
 
     function wireKanbanDnD() {
@@ -1849,13 +2053,98 @@
       if (!ok) return;
       tasks = [];
       taskExtras = {};
-      expandedTaskIds.clear();
+      detailsModalTaskId = null;
+      el.taskDetailsModal.classList.add("hidden");
+      el.taskDetailsModal.setAttribute("aria-hidden", "true");
+      if (el.modalAttachmentInput) el.modalAttachmentInput.value = "";
       saveTaskExtras();
       markDirtyAndSave();
       render();
     });
 
+    if (el.toggleDoneCollapseBtn) {
+      el.toggleDoneCollapseBtn.addEventListener("click", () => {
+        doneColumnCollapsed = !doneColumnCollapsed;
+        saveDoneCollapsed();
+        applyDoneColumnCollapsed();
+      });
+    }
+    if (el.closedSearchInput) {
+      el.closedSearchInput.addEventListener("input", render);
+    }
+
+    el.modalCloseBtn.addEventListener("click", () => closeTaskDetailsModal());
+    el.taskDetailsModal.addEventListener("click", (e) => {
+      if (e.target === el.taskDetailsModal) closeTaskDetailsModal();
+    });
+    el.modalSaveNotesBtn.addEventListener("click", () => {
+      persistModalNotes();
+      render();
+    });
+    el.modalSelectAllBtn.addEventListener("click", () => {
+      el.modalNotes.focus();
+      el.modalNotes.select();
+    });
+    el.modalCopyNotesBtn.addEventListener("click", async () => {
+      const text = el.modalNotes.value;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        el.modalNotes.focus();
+        el.modalNotes.select();
+        try {
+          document.execCommand("copy");
+        } catch { /* ignore */ }
+      }
+    });
+    el.modalAttachmentInput.addEventListener("change", async (e) => {
+      const input = e.target;
+      if (!detailsModalTaskId) return;
+      const files = Array.from(input.files || []);
+      if (!files.length) return;
+      const extra = getTaskExtra(detailsModalTaskId);
+      try {
+        for (const file of files) {
+          if (file.size > 2 * 1024 * 1024) {
+            alert(`Soubor ${file.name} je příliš velký. Limit je 2 MB.`);
+            continue;
+          }
+          const dataUrl = await readFileAsDataUrl(file);
+          extra.attachments.push({
+            name: file.name,
+            type: file.type || "application/octet-stream",
+            size: file.size,
+            dataUrl,
+            addedAt: Date.now()
+          });
+        }
+        saveTaskExtras();
+        renderModalAttachments();
+      } catch {
+        alert("Nepodařilo se nahrát přílohu.");
+      } finally {
+        input.value = "";
+      }
+    });
+    el.modalAttachmentList.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-modal-remove]");
+      if (!btn || !detailsModalTaskId) return;
+      const attIdx = Number(btn.getAttribute("data-modal-remove"));
+      const extra = getTaskExtra(detailsModalTaskId);
+      if (Number.isFinite(attIdx) && attIdx >= 0 && attIdx < extra.attachments.length) {
+        extra.attachments.splice(attIdx, 1);
+        saveTaskExtras();
+        renderModalAttachments();
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && detailsModalTaskId && !el.taskDetailsModal.classList.contains("hidden")) {
+        closeTaskDetailsModal();
+      }
+    });
+
     setView("kanban");
+    applyDoneColumnCollapsed();
     render();
     (async () => {
       const config = getCloudConfig();
