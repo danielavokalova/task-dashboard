@@ -637,6 +637,53 @@
       min-width: auto;
     }
 
+    .stats-time-panel {
+      padding: 18px 20px 20px;
+    }
+    .stats-time-panel h3 {
+      margin: 0 0 14px;
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+    }
+    .stats-time-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .stats-time-block {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(176, 201, 158, 0.55);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    .stats-time-block .st-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .stats-time-block .st-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .stats-time-block .st-value-sm {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .stats-time-block .st-detail {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.45;
+    }
+
     @media (max-width: 980px) {
       .toolbar { grid-template-columns: 1fr 1fr; }
       .new-task-form { grid-template-columns: 1fr 1fr; }
@@ -665,15 +712,21 @@
       <div class="card"><div class="muted">Rozpracované</div><div class="stat-value" id="statDoing">0</div></div>
       <div class="card"><div class="muted">Dokončené</div><div class="stat-value" id="statDone">0</div></div>
       <div class="card"><div class="muted">Po termínu</div><div class="stat-value" id="statOverdue">0</div></div>
-      <div class="card"><div class="muted">Dokončeno dnes</div><div class="stat-value" id="statDoneToday">0</div></div>
+      <div class="card"><div class="muted">Dokončeno dnes</div><div class="stat-value" id="statDoneToday">0</div><div class="stat-sub" id="statDoneTodayDate"></div></div>
       <div class="card"><div class="muted">Vysoká priorita (open)</div><div class="stat-value" id="statHighOpen">0</div></div>
-      <div class="card"><div class="muted">Do 7 dnů</div><div class="stat-value" id="statDueSoon">0</div></div>
+      <div class="card"><div class="muted">Do 7 dnů</div><div class="stat-value" id="statDueSoon">0</div><div class="stat-sub" id="statDueSoonHint"></div></div>
       <div class="card">
         <div class="muted">Úspěšnost</div>
         <div class="stat-value" id="statCompletion">0%</div>
         <div class="stat-sub">Dokončené / všechny úkoly</div>
       </div>
     </div>
+
+    <div class="dash-tile stats-time-panel">
+      <h3>Časové souhrny a zaměření</h3>
+      <div class="stats-time-grid" id="statsTimeGrid"></div>
+    </div>
+
     <div class="card stats-panel dash-tile">
       <div class="stats-panel-header">
         <div class="muted">Přehled podle produktu a typu požadavku</div>
@@ -896,7 +949,10 @@
       statDoneToday: document.getElementById("statDoneToday"),
       statHighOpen: document.getElementById("statHighOpen"),
       statDueSoon: document.getElementById("statDueSoon"),
+      statDueSoonHint: document.getElementById("statDueSoonHint"),
+      statDoneTodayDate: document.getElementById("statDoneTodayDate"),
       statCompletion: document.getElementById("statCompletion"),
+      statsTimeGrid: document.getElementById("statsTimeGrid"),
       productBreakdown: document.getElementById("productBreakdown"),
       requestTypeBreakdown: document.getElementById("requestTypeBreakdown"),
       breakdownSection: document.getElementById("breakdownSection"),
@@ -1245,6 +1301,14 @@
       el.statHighOpen.textContent = highOpen;
       el.statDueSoon.textContent = dueSoon;
       el.statDoneToday.textContent = doneToday;
+      if (el.statDoneTodayDate) {
+        el.statDoneTodayDate.textContent = `Den: ${formatShortCsDate(new Date())}`;
+      }
+      if (el.statDueSoonHint) {
+        const until = new Date();
+        until.setDate(until.getDate() + 7);
+        el.statDueSoonHint.textContent = `Termíny do ${formatShortCsDate(until)}`;
+      }
       el.statCompletion.textContent = completion + "%";
       el.todoCount.textContent = todo;
       el.doingCount.textContent = doing;
@@ -1261,6 +1325,7 @@
         count: tasks.filter((t) => normalizeRequestType(t.requestType) === name).length
       }));
       renderBreakdown(productCounts, requestTypeCounts);
+      renderStatsTimePanel(computeStatsTimeInsights());
     }
 
     function renderBreakdown(productCounts, requestTypeCounts) {
@@ -1325,6 +1390,124 @@
       return d.getFullYear() === now.getFullYear()
         && d.getMonth() === now.getMonth()
         && d.getDate() === now.getDate();
+    }
+
+    const MS_DAY = 24 * 60 * 60 * 1000;
+
+    function formatShortCsDate(d) {
+      return d.toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" });
+    }
+
+    function computeStatsTimeInsights() {
+      const now = Date.now();
+      const nowDate = new Date(now);
+      if (!tasks.length) {
+        return { empty: true };
+      }
+      const minCreated = Math.min(...tasks.map((t) => t.createdAt));
+      const maxActivity = Math.max(
+        ...tasks.map((t) => Math.max(t.createdAt, t.updatedAt || 0, t.completedAt || 0))
+      );
+      const rangeLabel = `${formatShortCsDate(new Date(minCreated))} – ${formatShortCsDate(new Date(maxActivity))}`;
+
+      const window7 = now - 7 * MS_DAY;
+      const window30 = now - 30 * MS_DAY;
+      const doneIn7 = tasks.filter((t) => t.status === "done" && t.completedAt && t.completedAt >= window7);
+      const doneIn30 = tasks.filter((t) => t.status === "done" && t.completedAt && t.completedAt >= window30);
+
+      const label7 = `${formatShortCsDate(new Date(window7))} – ${formatShortCsDate(nowDate)}`;
+      const label30 = `${formatShortCsDate(new Date(window30))} – ${formatShortCsDate(nowDate)}`;
+
+      const doneWithLead = tasks.filter(
+        (t) => t.status === "done" && t.completedAt != null && t.createdAt != null && t.completedAt >= t.createdAt
+      );
+      let avgDays = null;
+      let medDays = null;
+      if (doneWithLead.length) {
+        const durations = doneWithLead.map((t) => (t.completedAt - t.createdAt) / MS_DAY);
+        avgDays = durations.reduce((a, b) => a + b, 0) / durations.length;
+        const sorted = [...durations].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        medDays = sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      }
+
+      function topEntry(list, pick) {
+        if (!list.length) return null;
+        const m = {};
+        list.forEach((t) => {
+          const k = pick(t);
+          m[k] = (m[k] || 0) + 1;
+        });
+        return Object.entries(m).sort((a, b) => b[1] - a[1])[0];
+      }
+
+      const topProd = topEntry(doneIn30, (t) => normalizeProduct(t.product));
+      const topReq = topEntry(doneIn30, (t) => normalizeRequestType(t.requestType));
+
+      return {
+        empty: false,
+        rangeLabel,
+        done7: doneIn7.length,
+        done30: doneIn30.length,
+        label7,
+        label30,
+        avgDays,
+        medDays,
+        topProd,
+        topReq,
+        doneWithLeadCount: doneWithLead.length
+      };
+    }
+
+    function renderStatsTimePanel(insights) {
+      if (!el.statsTimeGrid) return;
+      if (insights.empty) {
+        el.statsTimeGrid.innerHTML = `
+          <div class="stats-time-block">
+            <div class="st-detail">Žádné úkoly — časové statistiky se zobrazí po přidání dat.</div>
+          </div>`;
+        return;
+      }
+      const fmtDays = (x) => (x == null || Number.isNaN(x) ? "—" : `${x.toFixed(1).replace(".", ",")} dní`);
+      const avgDetail =
+        insights.avgDays != null
+          ? `Průměr ${fmtDays(insights.avgDays)}, medián ${fmtDays(insights.medDays)}`
+          : "Nelze spočítat — chybí dokončené úkoly s platným datem založení a dokončení.";
+      const prodLine = insights.topProd
+        ? `${insights.topProd[0]} (${insights.topProd[1]}×)`
+        : "za posledních 30 dní žádné dokončení";
+      const reqLine = insights.topReq
+        ? `${insights.topReq[0]} (${insights.topReq[1]}×)`
+        : "za posledních 30 dní žádné dokončení";
+
+      el.statsTimeGrid.innerHTML = `
+        <div class="stats-time-block">
+          <div class="st-label">Rozsah dat v úkolech</div>
+          <div class="st-value st-value-sm">${escapeHtml(insights.rangeLabel)}</div>
+          <div class="st-detail">Od nejstaršího založení po poslední zaznamenanou aktivitu (úprava nebo dokončení).</div>
+        </div>
+        <div class="stats-time-block">
+          <div class="st-label">Dokončeno za 7 dní</div>
+          <div class="st-value">${insights.done7}</div>
+          <div class="st-detail">${escapeHtml(insights.label7)} · klouzavých 7 dní zpět od teď</div>
+        </div>
+        <div class="stats-time-block">
+          <div class="st-label">Dokončeno za 30 dní</div>
+          <div class="st-value">${insights.done30}</div>
+          <div class="st-detail">${escapeHtml(insights.label30)} · klouzavých 30 dní zpět od teď</div>
+        </div>
+        <div class="stats-time-block">
+          <div class="st-label">Doba od založení do dokončení</div>
+          <div class="st-value st-value-sm">${escapeHtml(avgDetail)}</div>
+          <div class="st-detail">Založení → dokončení, u ${insights.doneWithLeadCount} dokončených úkolů se známým průběhem.</div>
+        </div>
+        <div class="stats-time-block">
+          <div class="st-label">Primárně v posledních 30 dnech (dokončené)</div>
+          <div class="st-detail"><strong>Produkt:</strong> ${escapeHtml(prodLine)}</div>
+          <div class="st-detail"><strong>Typ požadavku:</strong> ${escapeHtml(reqLine)}</div>
+          <div class="st-detail">Nejčastější hodnoty podle počtu dokončení v tomto období.</div>
+        </div>
+      `;
     }
 
     function taskCardHtml(task, draggable) {
@@ -1550,6 +1733,7 @@
     }
 
     function buildReportText() {
+      const ti = computeStatsTimeInsights();
       const total = tasks.length;
       const todo = tasks.filter((t) => t.status === "todo").length;
       const doing = tasks.filter((t) => t.status === "doing").length;
@@ -1564,7 +1748,7 @@
         .slice(0, 5)
         .map((t, i) => `${i + 1}. ${t.title} (${priorityLabel(t.priority)}, ${statusLabel(t.status)})`);
 
-      return [
+      const lines = [
         "Dashboard ukolu - rychly report",
         `Datum: ${new Date().toLocaleString("cs-CZ")}`,
         "",
@@ -1575,11 +1759,37 @@
         `Uspesnost: ${completion}%`,
         `Po terminu: ${overdue}`,
         `Do 7 dnu: ${dueSoon}`,
-        `Vysoka priorita (open): ${highOpen}`,
+        `Vysoka priorita (open): ${highOpen}`
+      ];
+
+      if (!ti.empty) {
+        lines.push(
+          "",
+          "Casove souhrny:",
+          `Rozsah dat v ukolech: ${ti.rangeLabel}`,
+          `Dokonceno za 7 dni (${ti.label7}): ${ti.done7}`,
+          `Dokonceno za 30 dni (${ti.label30}): ${ti.done30}`
+        );
+        if (ti.avgDays != null) {
+          lines.push(
+            `Prumerna doba zalozeni -> dokonceni: ${ti.avgDays.toFixed(1)} dni, median: ${ti.medDays.toFixed(1)} dni (${ti.doneWithLeadCount} ukolu)`
+          );
+        }
+        if (ti.topProd) {
+          lines.push(`Nejcasteji dokonceny produkt (30 dni): ${ti.topProd[0]} (${ti.topProd[1]}x)`);
+        }
+        if (ti.topReq) {
+          lines.push(`Nejcasteji dokonceny typ (30 dni): ${ti.topReq[0]} (${ti.topReq[1]}x)`);
+        }
+      }
+
+      lines.push(
         "",
         "Top otevrene ukoly:",
         ...(topOpen.length ? topOpen : ["- Zadny otevreny ukol"])
-      ].join("\n");
+      );
+
+      return lines.join("\n");
     }
 
     async function copyReport() {
