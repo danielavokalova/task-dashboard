@@ -745,6 +745,75 @@
       }
       .header-clock { text-align: left; }
     }
+
+    /* ── Help modal ── */
+    .help-dialog {
+      width: min(96vw, 780px);
+      max-height: min(90vh, 860px);
+    }
+    .help-body {
+      padding: 20px 22px 24px;
+      overflow: auto;
+      flex: 1;
+      min-height: 0;
+    }
+    .help-section {
+      margin-bottom: 24px;
+    }
+    .help-section:last-child { margin-bottom: 0; }
+    .help-section-title {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--accent-2);
+      margin: 0 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid rgba(17, 168, 104, 0.18);
+    }
+    .help-row {
+      display: grid;
+      grid-template-columns: minmax(160px, 200px) 1fr;
+      gap: 4px 14px;
+      align-items: baseline;
+      margin-bottom: 6px;
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+    .help-key {
+      font-weight: 700;
+      color: var(--text);
+    }
+    .help-val {
+      color: #2a4a38;
+    }
+    .help-kbd {
+      display: inline-block;
+      padding: 1px 7px;
+      background: #eef5ea;
+      border: 1px solid #b0c99e;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.6;
+      white-space: nowrap;
+    }
+    .help-tip {
+      font-size: 12.5px;
+      color: var(--muted);
+      background: #f2faf0;
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 8px 12px;
+      margin-top: 8px;
+      line-height: 1.55;
+    }
+    @media (max-width: 540px) {
+      .help-row { grid-template-columns: 1fr; }
+      .help-key { color: var(--muted); font-size: 12px; }
+    }
   </style>
 </head>
 <body>
@@ -899,6 +968,7 @@
         <button id="gistBackupBtn">GitHub záloha</button>
         <button id="gistRestoreBtn">Obnovit zálohu</button>
         <div id="gistStatus" class="cloud-status">Záloha: lokální</div>
+        <button id="helpBtn" title="Nápověda k dashboardu">? Nápověda</button>
       </div>
 
       <div class="view-switch" style="margin-top: 12px;">
@@ -942,6 +1012,94 @@
     </div>
   </div>
   <div id="quickMenu" class="quick-menu hidden"></div>
+
+  <!-- Help modal -->
+  <div id="helpModal" class="modal-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
+    <div class="modal-dialog help-dialog">
+      <div class="modal-header">
+        <h2 id="helpModalTitle">Nápověda k Task Dashboardu</h2>
+        <button type="button" id="helpCloseBtn" class="btn-icon">Zavřít</button>
+      </div>
+      <div class="help-body">
+
+        <div class="help-section">
+          <div class="help-section-title">Přidání úkolu</div>
+          <div class="help-row"><span class="help-key">Název</span><span class="help-val">Vyplň název a stiskni <span class="help-kbd">Enter</span> nebo klikni na <strong>Přidat úkol</strong>.</span></div>
+          <div class="help-row"><span class="help-key">Priorita</span><span class="help-val">Nízká · Střední · Vysoká — barevně odlišeno na kartě.</span></div>
+          <div class="help-row"><span class="help-key">Stav</span><span class="help-val">K vyřízení · Rozpracované · Dokončené.</span></div>
+          <div class="help-row"><span class="help-key">Produkt / Typ</span><span class="help-val">Kategorizuje úkol pro statistiky.</span></div>
+          <div class="help-row"><span class="help-key">Termín</span><span class="help-val">Datum splnění — po termínu se zobrazí červeně.</span></div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">Kanban &amp; Seznam</div>
+          <div class="help-row"><span class="help-key">Kanban pohled</span><span class="help-val">Tři sloupce: K vyřízení, Rozpracované, Dokončené. Karty lze přetahovat drag&amp;drop.</span></div>
+          <div class="help-row"><span class="help-key">Seznam pohled</span><span class="help-val">Tabulkový přehled s inline úpravami přímo na řádku.</span></div>
+          <div class="help-row"><span class="help-key">Dokončené (CLOSED)</span><span class="help-val">Sloupec lze sbalit/rozbalit tlačítkem — uvnitř funguje vyhledávání v historii.</span></div>
+          <div class="help-tip">Drag&amp;drop funguje pouze v Kanban pohledu — stačí kartu uchopit a přesunout do jiného sloupce.</div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">Rychlé menu (pravý klik / klik na ikonu)</div>
+          <div class="help-row"><span class="help-key">Změna stavu</span><span class="help-val">Jednoklikem přepni K vyřízení / Rozpracované / Dokončené.</span></div>
+          <div class="help-row"><span class="help-key">Priorita</span><span class="help-val">Nastavení priority přímo z menu bez otevření editoru.</span></div>
+          <div class="help-row"><span class="help-key">Termin</span><span class="help-val">Pole pro datum splnění — přijímá formát YYYY-MM-DD.</span></div>
+          <div class="help-row"><span class="help-key">Smazat</span><span class="help-val">Odstraní úkol po potvrzení.</span></div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">Poznámky &amp; přílohy</div>
+          <div class="help-row"><span class="help-key">Otevřít modal</span><span class="help-val">Klikni na název úkolu v seznamu nebo na kartu v Kanbanu.</span></div>
+          <div class="help-row"><span class="help-key">Poznámky</span><span class="help-val">Volný text — vhodné pro detaily, stand-up záznamy, komentáře.</span></div>
+          <div class="help-row"><span class="help-key">Přílohy</span><span class="help-val">Libovolné soubory uložené lokálně v prohlížeči (localStorage).</span></div>
+          <div class="help-row"><span class="help-key"><span class="help-kbd">Ctrl+A</span> v modálu</span><span class="help-val">Označí veškerý text poznámky pro rychlé kopírování.</span></div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">Filtrování &amp; vyhledávání</div>
+          <div class="help-row"><span class="help-key">Hledat</span><span class="help-val">Průběžné vyhledávání podle názvu úkolu.</span></div>
+          <div class="help-row"><span class="help-key">Filtry</span><span class="help-val">Stav · Priorita · Produkt · Typ požadavku — kombinují se.</span></div>
+          <div class="help-row"><span class="help-key">Řazení</span><span class="help-val">Termín (nejbližší/nejpozdější), Nejnovější, Nejstarší.</span></div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">Export &amp; import CSV</div>
+          <div class="help-row"><span class="help-key">Export CSV</span><span class="help-val">Stáhne všechny úkoly jako CSV soubor (záloha nebo sdílení).</span></div>
+          <div class="help-row"><span class="help-key">Import CSV</span><span class="help-val">Načte úkoly z dříve exportovaného souboru — stávající data budou nahrazena.</span></div>
+          <div class="help-tip">CSV záloha je vhodná pro přenos mezi zařízeními nebo jako offline backup.</div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">Cloud synchronizace (Supabase)</div>
+          <div class="help-row"><span class="help-key">Cloud připojení</span><span class="help-val">Zadej Project URL a anon key z Supabase projektu.</span></div>
+          <div class="help-row"><span class="help-key">Sync teď</span><span class="help-val">Ručně spustí synchronizaci s cloudem.</span></div>
+          <div class="help-row"><span class="help-key">Automatický sync</span><span class="help-val">Po každé změně se data automaticky synchronizují do Supabase.</span></div>
+          <div class="help-tip">Postup nastavení Supabase tabulky najdeš v souboru <strong>README-task-dashboard.md</strong>.</div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">GitHub záloha (Gist)</div>
+          <div class="help-row"><span class="help-key">GitHub záloha</span><span class="help-val">Připoj se GitHub Personal Access Tokenem (potřebuje oprávnění <em>gist</em>).</span></div>
+          <div class="help-row"><span class="help-key">Automatické ukládání</span><span class="help-val">Po každé změně se úkoly zálohují do privátního Gistu.</span></div>
+          <div class="help-row"><span class="help-key">Obnovit zálohu</span><span class="help-val">Načte data z poslední zálohy na GitHubu — stávající data budou nahrazena.</span></div>
+          <div class="help-row"><span class="help-key">Token</span><span class="help-val">GitHub → Settings → Developer settings → Personal access tokens → New token → zaškrtni <em>gist</em>.</span></div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">Klávesové zkratky</div>
+          <div class="help-row"><span class="help-key"><span class="help-kbd">Enter</span> v názvu</span><span class="help-val">Přidá nový úkol.</span></div>
+          <div class="help-row"><span class="help-key"><span class="help-kbd">Escape</span></span><span class="help-val">Zavře otevřený modal nebo rychlé menu.</span></div>
+          <div class="help-row"><span class="help-key"><span class="help-kbd">Ctrl+A</span> v modálu</span><span class="help-val">Označí veškerý text poznámky.</span></div>
+          <div class="help-row"><span class="help-key"><span class="help-kbd">Ctrl+C</span> v modálu</span><span class="help-val">Zkopíruje označený text do schránky.</span></div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <div class="spacer"></div>
+        <button type="button" class="btn-primary small-btn" id="helpCloseBtnFooter">Zavřít nápovědu</button>
+      </div>
+    </div>
+  </div>
 
   <div id="taskDetailsModal" class="modal-overlay hidden" aria-hidden="true">
     <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTaskTitle">
@@ -1072,7 +1230,11 @@
       quickMenu: document.getElementById("quickMenu"),
       gistBackupBtn: document.getElementById("gistBackupBtn"),
       gistRestoreBtn: document.getElementById("gistRestoreBtn"),
-      gistStatus: document.getElementById("gistStatus")
+      gistStatus: document.getElementById("gistStatus"),
+      helpBtn: document.getElementById("helpBtn"),
+      helpModal: document.getElementById("helpModal"),
+      helpCloseBtn: document.getElementById("helpCloseBtn"),
+      helpCloseBtnFooter: document.getElementById("helpCloseBtnFooter")
     };
 
     function loadTaskExtras() {
@@ -2488,6 +2650,25 @@
       await connectGist(token.trim());
     });
     el.gistRestoreBtn.addEventListener("click", () => restoreFromGist());
+
+    // ── Nápověda ──────────────────────────────────────────────────────────
+    function openHelp() {
+      el.helpModal.classList.remove("hidden");
+      el.helpModal.setAttribute("aria-hidden", "false");
+      el.helpCloseBtn.focus();
+    }
+    function closeHelp() {
+      el.helpModal.classList.add("hidden");
+      el.helpModal.setAttribute("aria-hidden", "true");
+    }
+    el.helpBtn.addEventListener("click", openHelp);
+    el.helpCloseBtn.addEventListener("click", closeHelp);
+    el.helpCloseBtnFooter.addEventListener("click", closeHelp);
+    el.helpModal.addEventListener("click", (e) => {
+      if (e.target === el.helpModal) closeHelp();
+    });
+    // ── konec Nápověda ────────────────────────────────────────────────────
+
     el.csvFileInput.addEventListener("change", () => {
       const file = el.csvFileInput.files && el.csvFileInput.files[0];
       if (!file) return;
@@ -2623,8 +2804,9 @@
       }
     });
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && detailsModalTaskId && !el.taskDetailsModal.classList.contains("hidden")) {
-        closeTaskDetailsModal();
+      if (e.key === "Escape") {
+        if (!el.helpModal.classList.contains("hidden")) { closeHelp(); return; }
+        if (detailsModalTaskId && !el.taskDetailsModal.classList.contains("hidden")) { closeTaskDetailsModal(); }
       }
     });
 
