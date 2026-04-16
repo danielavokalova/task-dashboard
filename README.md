@@ -1,20 +1,29 @@
-# task-dashboard
+# Task Dashboard – Daniela Vokálová
 
-## Purpose
-- Central description for this folder and its project intent.
+Osobní task-dashboard v jednom HTML souboru. Kanban + seznam, statistiky, automatická záloha na GitHub.
 
-## How To Run
-- Open this folder in Cursor/VS Code.
-- Use project-specific run instructions from files like `README`, `requirements.txt`, `package.json`, or scripts in this folder.
+## Kde ho najdeš
 
-## Dependencies
-- See dependency files in this folder (if present).
+**https://danielavokalova.github.io/task-dashboard/task-dashboard.html**
 
-## Owner
-- Owner: Daniela (update if needed).
+## Co umí
 
-## Status
-- Active (update as needed).
+- Kanban board (K vyřízení / Rozpracované / Dokončené)
+- Filtrování, řazení, vyhledávání
+- Priority, termíny, produkty, typy požadavků
+- Statistiky a grafy
+- Export/Import CSV
+- Automatická záloha na GitHub Gist po každé změně
+- Obnova dat po výpadku proudu nebo restartu prohlížeče
 
-## Safety Note
-- This README is documentation-only and does not affect application functionality.
+## Záloha dat
+
+Po výpadku (vypnutí PC, reset prohlížeče) se data obnoví automaticky z GitHubu.
+
+Pokud záloha přestane fungovat (expirovaný token), vygeneruj nový na:
+**github.com → Settings → Developer settings → Personal access tokens → Tokens (classic)**
+→ scope: `gist` → pak otevři setup URL (viz CLAUDE.md).
+
+## Technické detaily
+
+Viz `CLAUDE.md` – dokumentace pro vývojáře / Claude Code.
