@@ -2152,11 +2152,8 @@
       }
     }
 
-    async function restoreFromGist() {
-      if (!gistToken || !gistId) {
-        alert("GitHub záloha není připojena. Nejdříve klikni na 'GitHub záloha'.");
-        return;
-      }
+    async function restoreFromGist(auto) {
+      if (!gistToken || !gistId) return;
       updateGistStatus("Záloha: načítám…");
       try {
         const resp = await fetch(`https://api.github.com/gists/${gistId}`, {
@@ -2168,9 +2165,12 @@
         if (!file || !file.content) throw new Error("Soubor tasks.json v záloze nenalezen.");
         const data = JSON.parse(file.content);
         if (!Array.isArray(data.tasks)) throw new Error("Záloha neobsahuje platná data.");
-        const dateStr = data.savedAt ? new Date(data.savedAt).toLocaleString("cs-CZ") : "neznámé datum";
-        const ok = confirm(`Obnovit ${data.tasks.length} úkolů ze zálohy z ${dateStr}?\n\nStávající úkoly budou nahrazeny.`);
-        if (!ok) { updateGistStatus("Záloha: připojeno"); return; }
+        if (!auto) {
+          const dateStr = data.savedAt ? new Date(data.savedAt).toLocaleString("cs-CZ") : "neznámé datum";
+          const ok = confirm(`Obnovit ${data.tasks.length} úkolů ze zálohy z ${dateStr}?\n\nStávající úkoly budou nahrazeny.`);
+          if (!ok) { updateGistStatus("Záloha: připojeno"); return; }
+        }
+        if (data.tasks.length === 0) { updateGistStatus("Záloha: připojeno"); return; }
         tasks = data.tasks.map(normalizeTask);
         taskExtras = data.taskExtras || {};
         saveTasks();
@@ -2178,10 +2178,9 @@
         render();
         const timeStr = new Date().toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" });
         updateGistStatus(`Záloha: obnoveno ${timeStr}`);
-        alert(`Úspěšně obnoveno ${tasks.length} úkolů ze zálohy.`);
       } catch (err) {
         updateGistStatus("Záloha: chyba obnovy");
-        alert(`Nepodařilo se obnovit zálohu.\n\n${err.message}`);
+        console.error("Gist restore failed:", err);
       }
     }
 
@@ -2640,18 +2639,24 @@
       }
     })();
     (async () => {
+      // Pokud URL obsahuje #gist_token=...&gist_id=... , uložit a smazat z URL
+      const hash = window.location.hash.slice(1);
+      if (hash.includes("gist_token=")) {
+        const params = new URLSearchParams(hash);
+        const t = params.get("gist_token");
+        const i = params.get("gist_id");
+        if (t && i) {
+          setGistConfig(t, i);
+          history.replaceState(null, "", window.location.pathname + window.location.search);
+        }
+      }
       const gistConfig = getGistConfig();
-      if (!gistConfig) return;
+      if (!gistConfig) { updateGistStatus("Záloha: nenastaveno"); return; }
       gistToken = gistConfig.token;
       gistId = gistConfig.id;
       updateGistStatus("Záloha: připojeno");
-      // Pokud jsou lokální data prázdná (výpadek proudu apod.), nabídni obnovu
       if (tasks.length === 0) {
-        const restore = confirm(
-          "Lokální úkoly jsou prázdné (mohl nastat výpadek nebo reset prohlížeče).\n\n" +
-          "Chceš obnovit data z poslední zálohy na GitHubu?"
-        );
-        if (restore) await restoreFromGist();
+        await restoreFromGist(true);
       }
     })();
   </script>
