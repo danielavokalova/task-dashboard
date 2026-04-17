@@ -1105,16 +1105,20 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          return Array.isArray(parsed) ? parsed.map(normalizeTask) : sampleTasks();
+          if (Array.isArray(parsed)) return parsed.map(normalizeTask);
+          // corrupt data — return [] so Gist auto-restore can take over
+          return [];
         }
         const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
         if (legacyRaw) {
           const legacyParsed = JSON.parse(legacyRaw);
           if (Array.isArray(legacyParsed)) return legacyParsed.map(normalizeTask);
         }
-        return sampleTasks();
+        // no data in localStorage → return [] so Gist auto-restore fires at startup
+        return [];
       } catch {
-        return sampleTasks();
+        // parse error — return [] so Gist auto-restore can take over
+        return [];
       }
     }
 
@@ -2070,6 +2074,7 @@
 
     async function saveToGist() {
       if (!gistToken || !gistId || gistBackupInProgress) return;
+      if (tasks.length === 0) return; // never overwrite Gist with an empty list
       gistBackupInProgress = true;
       updateGistStatus("Záloha: ukládám…");
       try {
