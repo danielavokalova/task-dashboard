@@ -639,6 +639,105 @@
     }
     .modal-footer .spacer { flex: 1; min-width: 8px; }
 
+    /* Checklist */
+    .checklist-section { display: flex; flex-direction: column; gap: 8px; }
+    .checklist-section h4 {
+      margin: 0 0 4px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .checklist-progress {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-2);
+      margin-left: 8px;
+    }
+    .checklist-items { display: flex; flex-direction: column; gap: 5px; }
+    .checklist-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      background: #f5fbf2;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .checklist-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .checklist-item-text {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .checklist-item-text.done {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+    .checklist-item-del {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #b0b8b0;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0 2px;
+      flex-shrink: 0;
+    }
+    .checklist-item-del:hover { color: #e05050; }
+    .checklist-add-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .checklist-add-row input {
+      flex: 1;
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      background: #fff;
+    }
+    .checklist-add-row input:focus {
+      outline: 2px solid rgba(17,168,104,.4);
+      outline-offset: 1px;
+    }
+    .checklist-add-row button {
+      padding: 7px 14px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .checklist-add-row button:hover { background: var(--accent-2); }
+    /* badge on task card */
+    .checklist-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-2);
+      background: #e8f8f0;
+      border: 1px solid rgba(17,168,104,.25);
+      border-radius: 5px;
+      padding: 1px 6px;
+    }
+    .checklist-badge.all-done { background: #d0f0e0; color: #0a7a48; }
+
     /* Sloupec Dokončené (CLOSED): sbalení + hledání */
     .kanban-col-done .closed-search-wrap {
       padding: 0 10px 8px;
@@ -745,6 +844,28 @@
       }
       .header-clock { text-align: left; }
     }
+
+    #saveToast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: #0f2a21;
+      color: #d6f0e0;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 10px;
+      box-shadow: 0 6px 20px rgba(15, 42, 33, 0.35);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    #saveToast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -830,6 +951,7 @@
           <option value="CM">CM</option>
           <option value="TM">TM</option>
           <option value="mobile">mobile</option>
+          <option value="TO DO (dělám denně)">TO DO (dělám denně)</option>
           <option value="jiné">jiné</option>
         </select>
         <select id="filterRequestType">
@@ -842,6 +964,7 @@
           <option value="analýza">analýza</option>
           <option value="podpora">podpora</option>
           <option value="reporting">reporting</option>
+          <option value="TO DO (dělám denně)">TO DO (dělám denně)</option>
           <option value="jiné">jiné</option>
         </select>
         <select id="sortBy">
@@ -872,6 +995,7 @@
           <option value="CM">CM</option>
           <option value="TM">TM</option>
           <option value="mobile">mobile</option>
+          <option value="TO DO (dělám denně)">TO DO (dělám denně)</option>
           <option value="jiné">jiné</option>
         </select>
         <select id="newRequestType">
@@ -883,6 +1007,7 @@
           <option value="analýza">analýza</option>
           <option value="podpora">podpora</option>
           <option value="reporting">reporting</option>
+          <option value="TO DO (dělám denně)">TO DO (dělám denně)</option>
           <option value="jiné">jiné</option>
         </select>
         <input id="newDueDate" type="date" />
@@ -896,6 +1021,9 @@
         <button id="connectCloudBtn">Cloud připojení</button>
         <button id="syncNowBtn">Sync teď</button>
         <div id="cloudStatus" class="cloud-status">Cloud: lokální režim</div>
+        <button id="gistBackupBtn">GitHub záloha</button>
+        <button id="gistRestoreBtn">Obnovit zálohu</button>
+        <div id="gistStatus" class="cloud-status">Záloha: lokální</div>
       </div>
 
       <div class="view-switch" style="margin-top: 12px;">
@@ -946,16 +1074,24 @@
         <h2 id="modalTaskTitle">Úkol</h2>
         <button type="button" id="modalCloseBtn" class="btn-icon">Zavřít</button>
       </div>
-      <p class="modal-hint">Úpravy textu: Ctrl+A označí vše, Ctrl+C zkopíruje (vhodné pro stand-up tabulku). Změny se uloží při Zavřít nebo Uložit.</p>
+      <p class="modal-hint">Změny se uloží automaticky při zavření.</p>
       <div class="modal-body">
-        <textarea id="modalNotes" class="modal-notes" placeholder="Poznámky k úkolu…"></textarea>
+        <div class="checklist-section">
+          <h4>Checklist <span id="modalChecklistProgress" class="checklist-progress"></span></h4>
+          <div class="checklist-items" id="modalChecklistItems"></div>
+          <div class="checklist-add-row">
+            <input type="text" id="modalChecklistInput" placeholder="Přidat bod…" />
+            <button type="button" id="modalChecklistAddBtn">+ Přidat</button>
+          </div>
+        </div>
+        <textarea id="modalNotes" class="modal-notes" placeholder="Poznámky k úkolu…" style="min-height: min(30vh, 240px);"></textarea>
         <div class="attachment-row">
           <input type="file" id="modalAttachmentInput" multiple />
         </div>
         <div class="attachment-list" id="modalAttachmentList"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn-primary small-btn" id="modalSaveNotesBtn">Uložit poznámku</button>
+        <button type="button" class="btn-primary small-btn" id="modalSaveNotesBtn">Uložit</button>
         <button type="button" class="small-btn" id="modalSelectAllBtn">Označit vše (Ctrl+A)</button>
         <div class="spacer"></div>
         <button type="button" class="small-btn" id="modalCopyNotesBtn">Kopírovat text</button>
@@ -970,6 +1106,7 @@
     const LEGACY_STORAGE_KEY = "taskDashboardDataV1";
     const CLOUD_CONFIG_KEY = "taskDashboardSupabaseConfigV1";
     const CLOUD_TABLE = "task_dashboard_tasks";
+    const GIST_CONFIG_KEY = "taskDashboardGistConfigV1";
 
     let tasks = loadTasks();
     let currentView = "kanban";
@@ -980,6 +1117,10 @@
     let syncInProgress = false;
     let syncDebounceTimer = null;
     let syncPollTimer = null;
+    let gistToken = null;
+    let gistId = null;
+    let gistBackupTimer = null;
+    let gistBackupInProgress = false;
     const DONE_COLLAPSED_KEY = "taskDashboardDoneCollapsedV1";
     let detailsModalTaskId = null;
     let doneColumnCollapsed = (() => {
@@ -1061,7 +1202,10 @@
       syncNowBtn: document.getElementById("syncNowBtn"),
       cloudStatus: document.getElementById("cloudStatus"),
       csvFileInput: document.getElementById("csvFileInput"),
-      quickMenu: document.getElementById("quickMenu")
+      quickMenu: document.getElementById("quickMenu"),
+      gistBackupBtn: document.getElementById("gistBackupBtn"),
+      gistRestoreBtn: document.getElementById("gistRestoreBtn"),
+      gistStatus: document.getElementById("gistStatus")
     };
 
     function loadTaskExtras() {
@@ -1081,10 +1225,13 @@
 
     function getTaskExtra(taskId) {
       if (!taskExtras[taskId]) {
-        taskExtras[taskId] = { notes: "", attachments: [] };
+        taskExtras[taskId] = { notes: "", attachments: [], checklist: [] };
       }
       if (!Array.isArray(taskExtras[taskId].attachments)) {
         taskExtras[taskId].attachments = [];
+      }
+      if (!Array.isArray(taskExtras[taskId].checklist)) {
+        taskExtras[taskId].checklist = [];
       }
       return taskExtras[taskId];
     }
@@ -1094,16 +1241,20 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          return Array.isArray(parsed) ? parsed.map(normalizeTask) : sampleTasks();
+          if (Array.isArray(parsed)) return parsed.map(normalizeTask);
+          // corrupt data — return [] so Gist auto-restore can take over
+          return [];
         }
         const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
         if (legacyRaw) {
           const legacyParsed = JSON.parse(legacyRaw);
           if (Array.isArray(legacyParsed)) return legacyParsed.map(normalizeTask);
         }
-        return sampleTasks();
+        // no data in localStorage → return [] so Gist auto-restore fires at startup
+        return [];
       } catch {
-        return sampleTasks();
+        // parse error — return [] so Gist auto-restore can take over
+        return [];
       }
     }
 
@@ -1173,12 +1324,12 @@
     }
 
     function normalizeProduct(value) {
-      const allowed = ["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "jiné"];
+      const allowed = ["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "TO DO (dělám denně)", "jiné"];
       return allowed.includes(value) ? value : "jiné";
     }
 
     function normalizeRequestType(value) {
-      const allowed = ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "jiné"];
+      const allowed = ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "TO DO (dělám denně)", "jiné"];
       return allowed.includes(value) ? value : "operativa";
     }
 
@@ -1242,11 +1393,11 @@
         current = task.priority;
       } else if (field === "product") {
         title = "Rychlá změna produktu";
-        options = ["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "jiné"];
+        options = ["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "TO DO (dělám denně)", "jiné"];
         current = task.product;
       } else if (field === "requestType") {
         title = "Rychlá změna typu požadavku";
-        options = ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "jiné"];
+        options = ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "TO DO (dělám denně)", "jiné"];
         current = task.requestType;
       } else if (field === "dueDate") {
         title = "Rychlá změna termínu";
@@ -1568,6 +1719,13 @@
     function taskCardHtml(task, draggable) {
       const overdue = isOverdue(task);
       const editOpen = editingTaskIds.has(task.id);
+      const extra = taskExtras[task.id];
+      const cl = (extra && Array.isArray(extra.checklist)) ? extra.checklist : [];
+      const clTotal = cl.length;
+      const clDone = cl.filter((i) => i.checked).length;
+      const clBadge = clTotal > 0
+        ? `<span class="checklist-badge${clDone === clTotal ? " all-done" : ""}">☑ ${clDone}/${clTotal}</span>`
+        : "";
       return `
         <div class="task-item" ${draggable ? 'draggable="true"' : ""} data-task-id="${task.id}">
           <div class="task-main">
@@ -1580,6 +1738,7 @@
               <span class="tag tag-clickable ${overdue ? "overdue" : ""}" data-action="quick-due-date" data-id="${task.id}" title="Klikni pro rychlou změnu termínu">
                 ${overdue ? "Po termínu: " : "Termín: "}${formatDueDate(task.dueDate)}
               </span>
+              ${clBadge}
             </div>
           </div>
           <div class="task-actions">
@@ -1599,10 +1758,10 @@
                 ${optionsHtml(["todo", "doing", "done"], task.status)}
               </select>
               <select data-edit-field="product" data-id="${task.id}">
-                ${optionsHtml(["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "jiné"], task.product)}
+                ${optionsHtml(["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "TO DO (dělám denně)", "jiné"], task.product)}
               </select>
               <select data-edit-field="requestType" data-id="${task.id}">
-                ${optionsHtml(["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "jiné"], task.requestType)}
+                ${optionsHtml(["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "TO DO (dělám denně)", "jiné"], task.requestType)}
               </select>
               <input type="date" data-edit-field="dueDate" data-id="${task.id}" value="${escapeHtml(task.dueDate || "")}" />
             </div>
@@ -1674,6 +1833,22 @@
       } catch { /* ignore */ }
     }
 
+    function renderModalChecklist() {
+      if (!detailsModalTaskId) return;
+      const extra = getTaskExtra(detailsModalTaskId);
+      const list = extra.checklist;
+      const total = list.length;
+      const done = list.filter((i) => i.checked).length;
+      document.getElementById("modalChecklistProgress").textContent = total > 0 ? `${done}/${total}` : "";
+      document.getElementById("modalChecklistItems").innerHTML = list.map((item, idx) => `
+        <div class="checklist-item">
+          <input type="checkbox" ${item.checked ? "checked" : ""} data-cl-toggle="${idx}" />
+          <span class="checklist-item-text${item.checked ? " done" : ""}">${escapeHtml(item.text)}</span>
+          <button class="checklist-item-del" data-cl-delete="${idx}" title="Smazat">×</button>
+        </div>
+      `).join("") || '<div style="font-size:13px;color:var(--muted);">Zatím žádné body.</div>';
+    }
+
     function renderModalAttachments() {
       if (!detailsModalTaskId || !el.modalAttachmentList) return;
       const extra = getTaskExtra(detailsModalTaskId);
@@ -1696,15 +1871,12 @@
       el.modalTaskTitle.textContent = task.title;
       const extra = getTaskExtra(taskId);
       el.modalNotes.value = extra.notes || "";
+      renderModalChecklist();
       renderModalAttachments();
       el.taskDetailsModal.classList.remove("hidden");
       el.taskDetailsModal.setAttribute("aria-hidden", "false");
       if (el.modalAttachmentInput) el.modalAttachmentInput.value = "";
-      setTimeout(() => {
-        try {
-          el.modalNotes.focus();
-        } catch { /* ignore */ }
-      }, 30);
+      document.getElementById("modalChecklistInput").value = "";
     }
 
     function persistModalNotes() {
@@ -1781,10 +1953,20 @@
       render();
     }
 
+    let saveToastTimer = null;
+    function showSaveToast() {
+      const toast = document.getElementById("saveToast");
+      toast.classList.add("visible");
+      clearTimeout(saveToastTimer);
+      saveToastTimer = setTimeout(() => toast.classList.remove("visible"), 1800);
+    }
+
     function markDirtyAndSave() {
       hasUnsyncedLocalChanges = true;
       saveTasks();
+      showSaveToast();
       scheduleCloudSync();
+      scheduleGistBackup();
     }
 
     function buildReportText() {
@@ -2035,6 +2217,145 @@
         runCloudSync();
       }, 30000);
     }
+
+    // ── GitHub Gist záloha ──────────────────────────────────────────────────
+
+    function getGistConfig() {
+      try {
+        const raw = localStorage.getItem(GIST_CONFIG_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.token || !parsed.id) return null;
+        return parsed;
+      } catch { return null; }
+    }
+
+    function setGistConfig(token, id) {
+      localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify({ token, id }));
+    }
+
+    function updateGistStatus(text) {
+      el.gistStatus.textContent = text;
+    }
+
+    async function saveToGist() {
+      if (!gistToken || !gistId || gistBackupInProgress) return;
+      if (tasks.length === 0) return; // never overwrite Gist with an empty list
+      gistBackupInProgress = true;
+      updateGistStatus("Záloha: ukládám…");
+      try {
+        const payload = { tasks, taskExtras, savedAt: new Date().toISOString() };
+        const resp = await fetch(`https://api.github.com/gists/${gistId}`, {
+          method: "PATCH",
+          headers: {
+            "Authorization": `token ${gistToken}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            files: { "tasks.json": { content: JSON.stringify(payload, null, 2) } }
+          })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const timeStr = new Date().toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" });
+        updateGistStatus(`Záloha: uloženo ${timeStr}`);
+      } catch (err) {
+        updateGistStatus("Záloha: chyba uložení");
+        console.error("Gist backup failed:", err);
+      } finally {
+        gistBackupInProgress = false;
+      }
+    }
+
+    function scheduleGistBackup() {
+      if (!gistToken || !gistId) return;
+      clearTimeout(gistBackupTimer);
+      gistBackupTimer = setTimeout(saveToGist, 2000);
+    }
+
+    async function connectGist(token) {
+      updateGistStatus("Záloha: připojuji…");
+      try {
+        const existing = getGistConfig();
+        let id = (existing && existing.token === token) ? existing.id : null;
+
+        if (id) {
+          const check = await fetch(`https://api.github.com/gists/${id}`, {
+            headers: { "Authorization": `token ${token}` }
+          });
+          if (!check.ok) id = null;
+        }
+
+        if (!id) {
+          const initPayload = { tasks, taskExtras, savedAt: new Date().toISOString() };
+          const createResp = await fetch("https://api.github.com/gists", {
+            method: "POST",
+            headers: {
+              "Authorization": `token ${token}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              description: "Task Dashboard záloha – automatická",
+              public: false,
+              files: { "tasks.json": { content: JSON.stringify(initPayload, null, 2) } }
+            })
+          });
+          if (!createResp.ok) {
+            const errData = await createResp.json().catch(() => ({}));
+            throw new Error(errData.message || `HTTP ${createResp.status}`);
+          }
+          const gistData = await createResp.json();
+          id = gistData.id;
+        }
+
+        gistToken = token;
+        gistId = id;
+        setGistConfig(token, id);
+        updateGistStatus("Záloha: připojeno");
+        await saveToGist();
+        return true;
+      } catch (err) {
+        gistToken = null;
+        gistId = null;
+        updateGistStatus("Záloha: chyba připojení");
+        const msg = err && err.message ? err.message : "Neznámá chyba";
+        alert(`GitHub zálohu se nepodařilo připojit.\n\nDetail: ${msg}\n\nZkontroluj token — potřebuje oprávnění "gist".`);
+        return false;
+      }
+    }
+
+    async function restoreFromGist(auto) {
+      if (!gistToken || !gistId) return;
+      updateGistStatus("Záloha: načítám…");
+      try {
+        const resp = await fetch(`https://api.github.com/gists/${gistId}`, {
+          headers: { "Authorization": `token ${gistToken}` }
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const gistData = await resp.json();
+        const file = gistData.files && gistData.files["tasks.json"];
+        if (!file || !file.content) throw new Error("Soubor tasks.json v záloze nenalezen.");
+        const data = JSON.parse(file.content);
+        if (!Array.isArray(data.tasks)) throw new Error("Záloha neobsahuje platná data.");
+        if (!auto) {
+          const dateStr = data.savedAt ? new Date(data.savedAt).toLocaleString("cs-CZ") : "neznámé datum";
+          const ok = confirm(`Obnovit ${data.tasks.length} úkolů ze zálohy z ${dateStr}?\n\nStávající úkoly budou nahrazeny.`);
+          if (!ok) { updateGistStatus("Záloha: připojeno"); return; }
+        }
+        if (data.tasks.length === 0) { updateGistStatus("Záloha: připojeno"); return; }
+        tasks = data.tasks.map(normalizeTask);
+        taskExtras = data.taskExtras || {};
+        saveTasks();
+        saveTaskExtras();
+        render();
+        const timeStr = new Date().toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" });
+        updateGistStatus(`Záloha: obnoveno ${timeStr}`);
+      } catch (err) {
+        updateGistStatus("Záloha: chyba obnovy");
+        console.error("Gist restore failed:", err);
+      }
+    }
+
+    // ── konec GitHub Gist záloha ─────────────────────────────────────────────
 
     function toCsvValue(value) {
       const escaped = String(value ?? "").replace(/"/g, '""');
@@ -2325,6 +2646,18 @@
         notifyOnError: true
       });
     });
+    el.gistBackupBtn.addEventListener("click", async () => {
+      const current = getGistConfig();
+      const token = prompt(
+        "GitHub Personal Access Token\n\n" +
+        "Jak získat: github.com → Settings → Developer settings → Personal access tokens → Tokens (classic) → New token → zaškrtni 'gist'.\n\n" +
+        "Token začíná 'ghp_':",
+        current ? current.token : ""
+      );
+      if (!token || !token.trim()) return;
+      await connectGist(token.trim());
+    });
+    el.gistRestoreBtn.addEventListener("click", () => restoreFromGist());
     el.csvFileInput.addEventListener("change", () => {
       const file = el.csvFileInput.files && el.csvFileInput.files[0];
       if (!file) return;
@@ -2403,6 +2736,45 @@
       persistModalNotes();
       render();
     });
+
+    // Checklist: add item
+    document.getElementById("modalChecklistAddBtn").addEventListener("click", () => {
+      if (!detailsModalTaskId) return;
+      const input = document.getElementById("modalChecklistInput");
+      const text = input.value.trim();
+      if (!text) return;
+      const extra = getTaskExtra(detailsModalTaskId);
+      extra.checklist.push({ text, checked: false });
+      saveTaskExtras();
+      input.value = "";
+      renderModalChecklist();
+      render();
+    });
+    document.getElementById("modalChecklistInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("modalChecklistAddBtn").click();
+    });
+
+    // Checklist: toggle / delete (event delegation on the list)
+    document.getElementById("modalChecklistItems").addEventListener("click", (e) => {
+      if (!detailsModalTaskId) return;
+      const extra = getTaskExtra(detailsModalTaskId);
+      const toggleIdx = e.target.dataset.clToggle;
+      const deleteIdx = e.target.dataset.clDelete;
+      if (toggleIdx !== undefined) {
+        const idx = Number(toggleIdx);
+        extra.checklist[idx].checked = !extra.checklist[idx].checked;
+        saveTaskExtras();
+        renderModalChecklist();
+        render();
+      } else if (deleteIdx !== undefined) {
+        const idx = Number(deleteIdx);
+        extra.checklist.splice(idx, 1);
+        saveTaskExtras();
+        renderModalChecklist();
+        render();
+      }
+    });
+
     el.modalSelectAllBtn.addEventListener("click", () => {
       el.modalNotes.focus();
       el.modalNotes.select();
@@ -2472,10 +2844,32 @@
       const config = getCloudConfig();
       if (!config) {
         updateCloudStatus("Cloud: lokální režim");
-        return;
+      } else {
+        await connectCloud(config.url, config.anonKey);
       }
-      await connectCloud(config.url, config.anonKey);
+    })();
+    (async () => {
+      // Pokud URL obsahuje #gist_token=...&gist_id=... , uložit a smazat z URL
+      const hash = window.location.hash.slice(1);
+      if (hash.includes("gist_token=")) {
+        const params = new URLSearchParams(hash);
+        const t = params.get("gist_token");
+        const i = params.get("gist_id");
+        if (t && i) {
+          setGistConfig(t, i);
+          history.replaceState(null, "", window.location.pathname + window.location.search);
+        }
+      }
+      const gistConfig = getGistConfig();
+      if (!gistConfig) { updateGistStatus("Záloha: nenastaveno"); return; }
+      gistToken = gistConfig.token;
+      gistId = gistConfig.id;
+      updateGistStatus("Záloha: připojeno");
+      if (tasks.length === 0) {
+        await restoreFromGist(true);
+      }
     })();
   </script>
+  <div id="saveToast">✓ Uloženo</div>
 </body>
 </html>
