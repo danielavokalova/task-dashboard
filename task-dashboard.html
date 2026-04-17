@@ -951,7 +951,7 @@
           <option value="CM">CM</option>
           <option value="TM">TM</option>
           <option value="mobile">mobile</option>
-          <option value="TO DO (dělám denně)">TO DO (dělám denně)</option>
+          <option value="TO DO">TO DO</option>
           <option value="jiné">jiné</option>
         </select>
         <select id="filterRequestType">
@@ -964,7 +964,7 @@
           <option value="analýza">analýza</option>
           <option value="podpora">podpora</option>
           <option value="reporting">reporting</option>
-          <option value="TO DO (dělám denně)">TO DO (dělám denně)</option>
+          <option value="TO DO">TO DO</option>
           <option value="jiné">jiné</option>
         </select>
         <select id="sortBy">
@@ -995,7 +995,7 @@
           <option value="CM">CM</option>
           <option value="TM">TM</option>
           <option value="mobile">mobile</option>
-          <option value="TO DO (dělám denně)">TO DO (dělám denně)</option>
+          <option value="TO DO">TO DO</option>
           <option value="jiné">jiné</option>
         </select>
         <select id="newRequestType">
@@ -1007,7 +1007,7 @@
           <option value="analýza">analýza</option>
           <option value="podpora">podpora</option>
           <option value="reporting">reporting</option>
-          <option value="TO DO (dělám denně)">TO DO (dělám denně)</option>
+          <option value="TO DO">TO DO</option>
           <option value="jiné">jiné</option>
         </select>
         <input id="newDueDate" type="date" />
@@ -1324,12 +1324,12 @@
     }
 
     function normalizeProduct(value) {
-      const allowed = ["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "TO DO (dělám denně)", "jiné"];
+      const allowed = ["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "TO DO", "jiné"];
       return allowed.includes(value) ? value : "jiné";
     }
 
     function normalizeRequestType(value) {
-      const allowed = ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "TO DO (dělám denně)", "jiné"];
+      const allowed = ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "TO DO", "jiné"];
       return allowed.includes(value) ? value : "operativa";
     }
 
@@ -1393,11 +1393,11 @@
         current = task.priority;
       } else if (field === "product") {
         title = "Rychlá změna produktu";
-        options = ["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "TO DO (dělám denně)", "jiné"];
+        options = ["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "TO DO", "jiné"];
         current = task.product;
       } else if (field === "requestType") {
         title = "Rychlá změna typu požadavku";
-        options = ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "TO DO (dělám denně)", "jiné"];
+        options = ["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "TO DO", "jiné"];
         current = task.requestType;
       } else if (field === "dueDate") {
         title = "Rychlá změna termínu";
@@ -1758,10 +1758,10 @@
                 ${optionsHtml(["todo", "doing", "done"], task.status)}
               </select>
               <select data-edit-field="product" data-id="${task.id}">
-                ${optionsHtml(["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "TO DO (dělám denně)", "jiné"], task.product)}
+                ${optionsHtml(["GOL IBE", "TG", "FWD", "CM", "TM", "mobile", "TO DO", "jiné"], task.product)}
               </select>
               <select data-edit-field="requestType" data-id="${task.id}">
-                ${optionsHtml(["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "TO DO (dělám denně)", "jiné"], task.requestType)}
+                ${optionsHtml(["implementace", "operativa", "nastavení", "bug", "meeting", "analýza", "podpora", "reporting", "TO DO", "jiné"], task.requestType)}
               </select>
               <input type="date" data-edit-field="dueDate" data-id="${task.id}" value="${escapeHtml(task.dueDate || "")}" />
             </div>
