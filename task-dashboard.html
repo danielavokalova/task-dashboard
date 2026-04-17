@@ -745,6 +745,28 @@
       }
       .header-clock { text-align: left; }
     }
+
+    #saveToast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: #0f2a21;
+      color: #d6f0e0;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 10px;
+      box-shadow: 0 6px 20px rgba(15, 42, 33, 0.35);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    #saveToast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -1796,9 +1818,18 @@
       render();
     }
 
+    let saveToastTimer = null;
+    function showSaveToast() {
+      const toast = document.getElementById("saveToast");
+      toast.classList.add("visible");
+      clearTimeout(saveToastTimer);
+      saveToastTimer = setTimeout(() => toast.classList.remove("visible"), 1800);
+    }
+
     function markDirtyAndSave() {
       hasUnsyncedLocalChanges = true;
       saveTasks();
+      showSaveToast();
       scheduleCloudSync();
       scheduleGistBackup();
     }
@@ -2665,5 +2696,6 @@
       }
     })();
   </script>
+  <div id="saveToast">✓ Uloženo</div>
 </body>
 </html>
